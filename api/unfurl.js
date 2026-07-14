@@ -33,6 +33,24 @@ function getTitleTag(html) {
   return match ? decodeEntities(match[1].trim()) : "";
 }
 
+function getLinkHref(html, rel) {
+  const escaped = rel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re1 = new RegExp(`<link[^>]+rel=["']${escaped}["'][^>]*href=["']([^"']*)["']`, "i");
+  const re2 = new RegExp(`<link[^>]+href=["']([^"']*)["'][^>]*rel=["']${escaped}["']`, "i");
+  const match = html.match(re1) || html.match(re2);
+  return match ? decodeEntities(match[1].trim()) : "";
+}
+
+// Some product pages tag their main image with schema.org microdata
+// (itemprop="image") on a <meta> or directly on an <img>, instead of — or
+// alongside — Open Graph tags.
+function getItempropImage(html) {
+  const re1 = /<(?:meta|img)[^>]+itemprop=["']image["'][^>]*(?:content|src)=["']([^"']*)["']/i;
+  const re2 = /<(?:meta|img)[^>]+(?:content|src)=["']([^"']*)["'][^>]*itemprop=["']image["']/i;
+  const match = html.match(re1) || html.match(re2);
+  return match ? decodeEntities(match[1].trim()) : "";
+}
+
 function findPriceInJsonLd(html) {
   const scripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
   for (const [, raw] of scripts) {
@@ -80,6 +98,25 @@ function resolveUrl(maybeRelative, base) {
   }
 }
 
+// Status codes sites commonly use to push back on non-browser requests —
+// worth a clearer message than a generic "couldn't fetch" for these, since
+// it's the site refusing rather than a network problem.
+function messageForStatus(status) {
+  if (status === 401 || status === 403 || status === 999) {
+    return "Scraping isn't allowed on this site — it blocked the request.";
+  }
+  if (status === 429) {
+    return "This site is rate-limiting automated requests — try again in a moment.";
+  }
+  if (status === 404) {
+    return "That page wasn't found (404).";
+  }
+  if (status >= 500) {
+    return "This site's server had an error, or is blocking automated requests.";
+  }
+  return `Couldn't fetch that page (HTTP ${status}).`;
+}
+
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS");
@@ -120,7 +157,16 @@ module.exports = async (req, res) => {
     });
 
     if (!response.ok) {
-      res.status(200).json({ title: "", image: "", description: "", price: "", currency: "", siteName: parsed.hostname, sourceUrl: parsed.toString() });
+      res.status(200).json({
+        error: messageForStatus(response.status),
+        title: "",
+        image: "",
+        description: "",
+        price: "",
+        currency: "",
+        siteName: parsed.hostname,
+        sourceUrl: parsed.toString(),
+      });
       return;
     }
 
@@ -130,7 +176,10 @@ module.exports = async (req, res) => {
     const finalUrl = response.url || parsed.toString();
     const title = getMeta(html, "og:title") || getTitleTag(html);
     const description = getMeta(html, "og:description") || getMeta(html, "description");
-    const image = resolveUrl(getMeta(html, "og:image") || getMeta(html, "twitter:image"), finalUrl);
+    const image = resolveUrl(
+      getMeta(html, "og:image") || getMeta(html, "twitter:image") || getLinkHref(html, "image_src") || getItempropImage(html),
+      finalUrl
+    );
     const siteName = getMeta(html, "og:site_name") || parsed.hostname.replace(/^www\./, "");
 
     let price = getMeta(html, "product:price:amount") || getMeta(html, "og:price:amount");
@@ -143,7 +192,12 @@ module.exports = async (req, res) => {
       }
     }
 
-    res.status(200).json({
+    // The page loaded (HTTP 200) but nothing at all could be extracted —
+    // usually means the real content only appears after JavaScript runs
+    // (this fetch never executes scripts), or the response was actually a
+    // bot-check/consent page disguised as a normal 200.
+    const foundNothing = !title && !image && !description;
+    const result = {
       title,
       image,
       description,
@@ -151,7 +205,13 @@ module.exports = async (req, res) => {
       currency: currency || "",
       siteName,
       sourceUrl: finalUrl,
-    });
+    };
+    if (foundNothing) {
+      result.error = "Couldn't find any details on this page — it may block scraping or need JavaScript to load its content.";
+    } else if (!image) {
+      result.notice = "Got the details, but no image was found on this page.";
+    }
+    res.status(200).json(result);
   } catch (err) {
     const message = err && err.name === "AbortError" ? "Timed out fetching that page." : "Couldn't fetch that link.";
     res.status(200).json({ error: message, title: "", image: "", description: "", price: "", currency: "", siteName: parsed.hostname, sourceUrl: parsed.toString() });

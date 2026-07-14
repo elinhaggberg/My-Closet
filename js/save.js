@@ -88,6 +88,8 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
         if (data.error) {
           msgEl.textContent = `${data.error} You can still fill in the details yourself.`;
           msgEl.classList.add("error");
+        } else if (data.notice) {
+          msgEl.textContent = data.notice;
         } else {
           msgEl.textContent = "Got it — details filled in below.";
         }
