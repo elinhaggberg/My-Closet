@@ -7,8 +7,7 @@ export function filenameFor(name, ext = "json") {
   return `${slug || "my-closet"}.${ext}`;
 }
 
-function downloadFile(filename, content) {
-  const blob = new Blob([content], { type: "application/json" });
+function downloadBlob(filename, blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -24,9 +23,7 @@ function downloadFile(filename, content) {
 // Deliberately omits title/text alongside the file: some share targets treat
 // those as separate shareable content and create a companion text
 // attachment instead of just naming the file.
-export async function shareOrDownload(filename, content) {
-  const file = new File([content], filename, { type: "application/json" });
-
+async function shareFileOrDownload(file) {
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({ files: [file] });
@@ -36,6 +33,16 @@ export async function shareOrDownload(filename, content) {
     }
   }
 
-  downloadFile(filename, content);
+  downloadBlob(file.name, file);
   return "downloaded";
+}
+
+export async function shareOrDownload(filename, content) {
+  return shareFileOrDownload(new File([content], filename, { type: "application/json" }));
+}
+
+// Same share/download-fallback behavior, for binary content (e.g. the
+// moodboard collage PNG) instead of JSON text.
+export async function shareOrDownloadBlob(filename, blob) {
+  return shareFileOrDownload(new File([blob], filename, { type: blob.type }));
 }

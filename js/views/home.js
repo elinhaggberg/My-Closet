@@ -1,4 +1,4 @@
-import { getCards } from "../storage.js";
+import { getCards, getHomeTitle } from "../storage.js";
 import { createPinNode } from "../pin.js";
 import { renderTabbar } from "../tabbar.js";
 import { renderMasonry } from "../masonry.js";
@@ -11,6 +11,7 @@ export function renderHome(root, nav) {
   root.replaceChildren(tpl.content.cloneNode(true));
   renderTabbar(root, nav, "home");
 
+  document.getElementById("home-title").textContent = getHomeTitle();
   document.getElementById("add-btn").addEventListener("click", () => openSaveChoice(nav, renderList));
   document.getElementById("settings-btn").addEventListener("click", () => openSettingsMenu(nav, renderList));
 

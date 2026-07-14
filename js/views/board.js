@@ -5,7 +5,8 @@ import { renderMasonry } from "../masonry.js";
 import { openSaveChoice } from "../save.js";
 import { openCardDetail } from "../cardDetail.js";
 import { openSheet } from "../sheet.js";
-import { shareOrDownload, filenameFor } from "../share.js";
+import { shareOrDownload, shareOrDownloadBlob, filenameFor } from "../share.js";
+import { buildCollageBlob } from "../collage.js";
 
 export function renderBoard(root, nav, boardId) {
   const board = getBoard(boardId);
@@ -23,10 +24,8 @@ export function renderBoard(root, nav, boardId) {
   root.querySelector(".back-btn").addEventListener("click", () => nav.toBoards());
 
   const menuBtn = document.getElementById("board-menu-btn");
-  if (!isWishlist) {
-    menuBtn.classList.remove("hidden");
-    menuBtn.addEventListener("click", openBoardMenu);
-  }
+  menuBtn.classList.remove("hidden");
+  menuBtn.addEventListener("click", openBoardMenu);
 
   document.getElementById("add-to-board-btn").addEventListener("click", () => openSaveChoice(nav, renderList, board.id));
 
@@ -48,18 +47,42 @@ export function renderBoard(root, nav, boardId) {
   function openBoardMenu() {
     const sheet = openSheet("tpl-board-menu");
     sheet.el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
-    sheet.el.querySelector("#rename-board-btn").addEventListener("click", () => {
-      sheet.close();
-      openRename();
-    });
+
+    const renameBtn = sheet.el.querySelector("#rename-board-btn");
+    const deleteBtn = sheet.el.querySelector("#delete-board-btn");
+    if (isWishlist) {
+      renameBtn.classList.add("hidden");
+      deleteBtn.classList.add("hidden");
+    } else {
+      renameBtn.addEventListener("click", () => {
+        sheet.close();
+        openRename();
+      });
+      deleteBtn.addEventListener("click", () => {
+        sheet.close();
+        confirmDeleteBoard();
+      });
+    }
+
     sheet.el.querySelector("#export-board-btn").addEventListener("click", async () => {
       const data = exportBoardData(board);
       await shareOrDownload(filenameFor(board.name), JSON.stringify(data, null, 2));
       sheet.close();
     });
-    sheet.el.querySelector("#delete-board-btn").addEventListener("click", () => {
-      sheet.close();
-      confirmDeleteBoard();
+
+    const imageBtn = sheet.el.querySelector("#export-image-btn");
+    const imageBtnLabel = imageBtn.querySelector("span");
+    imageBtn.addEventListener("click", async () => {
+      imageBtn.disabled = true;
+      imageBtnLabel.textContent = "Generating…";
+      try {
+        const blob = await buildCollageBlob(getCardsForBoard(board.id));
+        await shareOrDownloadBlob(filenameFor(board.name, "png"), blob);
+        sheet.close();
+      } catch (err) {
+        imageBtnLabel.textContent = err.message || "Couldn't create the collage.";
+        imageBtn.disabled = false;
+      }
     });
   }
 

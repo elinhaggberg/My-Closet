@@ -6,6 +6,7 @@ const UNIT_KEY = "mc_unit_v1";
 const SIZE_PREFS_KEY = "mc_size_prefs_v1";
 const MEASUREMENT_NOTES_KEY = "mc_measurement_notes_v1";
 const CHECKLISTS_KEY = "mc_checklists_v1";
+const HOME_TITLE_KEY = "mc_home_title_v1";
 
 export const WISHLIST_BOARD_ID = "wishlist";
 
@@ -359,6 +360,16 @@ export function getUnit() {
 
 export function setUnit(unit) {
   localStorage.setItem(UNIT_KEY, unit);
+}
+
+export function getHomeTitle() {
+  return localStorage.getItem(HOME_TITLE_KEY) || "My Closet";
+}
+
+export function setHomeTitle(value) {
+  const trimmed = (value || "").trim();
+  if (trimmed) localStorage.setItem(HOME_TITLE_KEY, trimmed);
+  else localStorage.removeItem(HOME_TITLE_KEY);
 }
 
 export { uid };
