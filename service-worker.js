@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-closet-v2";
+const CACHE_NAME = "my-closet-v3";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -16,6 +16,7 @@ const APP_SHELL = [
   "./js/photo.js",
   "./js/pin.js",
   "./js/masonry.js",
+  "./js/collage.js",
   "./js/boardChips.js",
   "./js/sizeBox.js",
   "./js/save.js",
