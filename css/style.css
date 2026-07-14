@@ -322,8 +322,104 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .board-tile-body { padding: 10px 12px 12px; }
 .board-tile-title { font-size: 0.95rem; font-weight: 700; }
 .board-tile-meta { font-size: 0.78rem; color: var(--text-dim); margin: 2px 0 0; }
-.board-tile.wishlist-tile .board-tile-title { display: flex; align-items: center; gap: 6px; }
-.board-tile.wishlist-tile .icon { color: var(--accent); width: 0.95em; height: 0.95em; }
+/* Pinned Wishlist shortcut above the boards grid */
+.pinned-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 8px;
+  text-align: left;
+}
+:root[data-theme="playful"] .pinned-row {
+  background: var(--card-tint);
+  border-color: color-mix(in srgb, var(--bg) 85%, black);
+}
+.pinned-row-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  flex-shrink: 0;
+}
+.pinned-row-text { flex: 1; min-width: 0; }
+.pinned-row-title { font-size: 0.95rem; font-weight: 700; display: block; }
+.pinned-row-meta { font-size: 0.78rem; color: var(--text-dim); }
+.pinned-row-chevron { color: var(--text-dim); flex-shrink: 0; width: 1.1rem; height: 1.1rem; }
+
+/* Lists (checklists) */
+.list-tile-icon {
+  width: 100%;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--accent);
+}
+.list-tile-icon .icon { width: 2.2rem; height: 2.2rem; }
+
+.checklist-body { padding: 4px 16px 16px; }
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--border);
+}
+.list-item:last-child { border-bottom: none; }
+.list-item-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  background: var(--surface);
+  position: relative;
+  cursor: pointer;
+}
+.list-item-checkbox:checked { background: var(--accent); border-color: var(--accent); }
+.list-item-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 5px;
+  height: 10px;
+  border: solid var(--accent-text);
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+.list-item-text { flex: 1; min-width: 0; word-break: break-word; }
+.list-item:has(.list-item-checkbox:checked) .list-item-text { text-decoration: line-through; color: var(--text-dim); }
+.add-item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 4px 4px;
+}
+.add-item-row input {
+  flex: 1;
+  min-width: 0;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text);
+  font-size: 1rem;
+}
+.add-item-row input:focus { outline: none; border-color: var(--accent); }
 
 /* Save choice sheet */
 .choice-btn {
@@ -440,6 +536,36 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 }
 .photo-source-row { display: flex; gap: 10px; margin-bottom: 16px; }
 .photo-source-row .text-btn { flex: 1; text-align: center; }
+
+/* Wishlist heart toggle (used in save flow + card detail) */
+.wishlist-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+}
+.wishlist-toggle-icon {
+  width: 1.3rem;
+  height: 1.3rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  flex-shrink: 0;
+}
+.wishlist-toggle-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+}
+.wishlist-toggle-btn.active .wishlist-toggle-icon { fill: var(--accent); stroke: var(--accent); }
 
 /* Board chip picker (used in save flow + card detail) */
 .board-chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -715,6 +841,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 :root[data-theme="playful"] .sheet { border-radius: 28px 28px 0 0; }
 :root[data-theme="playful"] .theme-option { border-radius: 18px; }
 :root[data-theme="playful"] .board-chip { border-radius: 20px; }
+:root[data-theme="playful"] .pinned-row,
+:root[data-theme="playful"] .wishlist-toggle-btn,
+:root[data-theme="playful"] .add-item-row input { border-radius: 16px; }
 
 /* Playful theme: bouncier, more energetic press feedback. */
 :root[data-theme="playful"] .fab,

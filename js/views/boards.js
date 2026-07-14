@@ -1,6 +1,7 @@
-import { getBoards, getCardsForBoard, createBoard } from "../storage.js";
+import { getBoards, getCardsForBoard, createBoard, WISHLIST_BOARD_ID } from "../storage.js";
 import { renderTabbar } from "../tabbar.js";
 import { openSheet } from "../sheet.js";
+import { ICON_HEART, ICON_CHEVRON_RIGHT } from "../icons.js";
 
 export function renderBoards(root, nav) {
   const tpl = document.getElementById("tpl-boards");
@@ -9,7 +10,26 @@ export function renderBoards(root, nav) {
 
   document.getElementById("add-board-btn").addEventListener("click", openCreate);
 
+  renderPinnedWishlist();
   renderList();
+
+  function renderPinnedWishlist() {
+    const row = document.getElementById("pinned-board-row");
+    const count = getCardsForBoard(WISHLIST_BOARD_ID).length;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "pinned-row";
+    btn.innerHTML = `
+      <span class="pinned-row-icon">${ICON_HEART}</span>
+      <span class="pinned-row-text">
+        <span class="pinned-row-title">Wishlist</span>
+        <span class="pinned-row-meta">${count} item${count !== 1 ? "s" : ""}</span>
+      </span>
+      <span class="pinned-row-chevron">${ICON_CHEVRON_RIGHT}</span>
+    `;
+    btn.addEventListener("click", () => nav.toBoard(WISHLIST_BOARD_ID));
+    row.replaceChildren(btn);
+  }
 
   function renderList() {
     const grid = document.getElementById("boards-grid");
