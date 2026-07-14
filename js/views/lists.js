@@ -1,6 +1,7 @@
 import { getChecklists, createChecklist } from "../storage.js";
 import { renderTabbar } from "../tabbar.js";
 import { openSheet } from "../sheet.js";
+import { openSettingsMenu } from "../settingsMenu.js";
 
 export function renderLists(root, nav) {
   const tpl = document.getElementById("tpl-lists");
@@ -8,6 +9,7 @@ export function renderLists(root, nav) {
   renderTabbar(root, nav, "lists");
 
   document.getElementById("add-list-btn").addEventListener("click", openCreate);
+  document.getElementById("settings-btn").addEventListener("click", () => openSettingsMenu(nav, renderGrid));
 
   renderGrid();
 

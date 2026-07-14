@@ -1,6 +1,7 @@
 import { getBoards, getCardsForBoard, createBoard, WISHLIST_BOARD_ID } from "../storage.js";
 import { renderTabbar } from "../tabbar.js";
 import { openSheet } from "../sheet.js";
+import { openSettingsMenu } from "../settingsMenu.js";
 import { ICON_HEART, ICON_CHEVRON_RIGHT } from "../icons.js";
 
 export function renderBoards(root, nav) {
@@ -9,6 +10,10 @@ export function renderBoards(root, nav) {
   renderTabbar(root, nav, "boards");
 
   document.getElementById("add-board-btn").addEventListener("click", openCreate);
+  document.getElementById("settings-btn").addEventListener("click", () => openSettingsMenu(nav, () => {
+    renderPinnedWishlist();
+    renderList();
+  }));
 
   renderPinnedWishlist();
   renderList();
