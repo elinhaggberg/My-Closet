@@ -5,6 +5,8 @@ import { renderMeasurements } from "./views/measurements.js";
 import { renderLists } from "./views/lists.js";
 import { renderChecklist } from "./views/checklist.js";
 import { applyTheme } from "./theme.js";
+import { createEmptyCard } from "./storage.js";
+import { openCardEditor } from "./save.js";
 
 applyTheme();
 
@@ -66,8 +68,29 @@ function route() {
   }
 }
 
+// Handles a link shared into the app from the OS Share Sheet — the
+// Android share_target manifest entry and the iOS Shortcut workaround
+// (there's no Web Share Target support in Safari) both land here the same
+// way: a URL in the ?url= or ?text= query param on a plain page load, no
+// hash. Opens straight into the save flow with a fetch already kicked off,
+// instead of dropping you on Home with nothing.
+function handleIncomingShare() {
+  const params = new URLSearchParams(location.search);
+  const raw = params.get("url") || params.get("text") || "";
+  const match = raw.match(/https?:\/\/\S+/);
+  if (!match) return;
+
+  history.replaceState(null, "", location.pathname + location.hash);
+
+  const card = createEmptyCard();
+  card.kind = "link";
+  card.url = match[0];
+  openCardEditor(nav, { card, isNew: true, refresh: route, autoFetch: true });
+}
+
 window.addEventListener("hashchange", route);
 route();
+handleIncomingShare();
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
