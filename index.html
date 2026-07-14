@@ -254,15 +254,21 @@
         <span>Title</span>
         <input type="text" id="editor-title" maxlength="120" placeholder="Untitled" />
       </label>
-      <div class="field-row">
-        <label class="field">
-          <span>Price</span>
-          <input type="text" id="editor-price" inputmode="decimal" placeholder="0" />
-        </label>
-        <label class="field">
-          <span>Currency</span>
-          <input type="text" id="editor-currency" maxlength="6" placeholder="USD" />
-        </label>
+      <button type="button" class="price-toggle-btn" id="editor-price-toggle">
+        <svg class="icon price-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><path d="M3 3h8l10 10-8 8L3 11V3z"/><circle cx="7.5" cy="7.5" r="1.4" fill="currentColor" stroke="none"/></svg>
+        <span class="price-toggle-label">Include price?</span>
+      </button>
+      <div id="editor-price-block" class="hidden">
+        <div class="field-row">
+          <label class="field">
+            <span>Price</span>
+            <input type="text" id="editor-price" inputmode="decimal" placeholder="0" />
+          </label>
+          <label class="field">
+            <span>Currency</span>
+            <input type="text" id="editor-currency" maxlength="6" placeholder="USD" />
+          </label>
+        </div>
       </div>
       <label class="field">
         <span>Notes</span>

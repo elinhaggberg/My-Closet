@@ -30,6 +30,7 @@ export function openSaveChoice(nav, refresh, presetBoardId) {
 export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
   const draft = { ...card, boardIds: [...card.boardIds] };
   let wishlistActive = !!draft.wishlist || draft.boardIds.includes(WISHLIST_BOARD_ID);
+  let priceActive = !!draft.price;
   const wishlistDraft = draft.wishlist
     ? { category: draft.wishlist.category, garment: { ...draft.wishlist.garment } }
     : makeWishlistFields();
@@ -48,6 +49,12 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
   const titleInput = el.querySelector("#editor-title");
   const priceInput = el.querySelector("#editor-price");
   const currencyInput = el.querySelector("#editor-currency");
+  const priceToggle = el.querySelector("#editor-price-toggle");
+  const priceBlock = el.querySelector("#editor-price-block");
+  function renderPriceToggle() {
+    priceToggle.classList.toggle("active", priceActive);
+    priceBlock.classList.toggle("hidden", !priceActive);
+  }
 
   if (draft.kind === "link") {
     el.querySelector("#editor-url-block").classList.remove("hidden");
@@ -81,6 +88,10 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
         titleInput.value = draft.title || "";
         priceInput.value = draft.price || "";
         currencyInput.value = draft.currency || "";
+        if (data.price) {
+          priceActive = true;
+          renderPriceToggle();
+        }
         if (draft.image) {
           remoteImage.src = draft.image;
           remoteImage.classList.remove("hidden");
@@ -151,6 +162,11 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
   currencyInput.value = draft.currency || "";
   currencyInput.addEventListener("input", () => {
     draft.currency = currencyInput.value;
+  });
+  renderPriceToggle();
+  priceToggle.addEventListener("click", () => {
+    priceActive = !priceActive;
+    renderPriceToggle();
   });
 
   const noteInput = el.querySelector("#editor-note");
@@ -237,6 +253,8 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
     const finalCard = {
       ...draft,
       title: draft.title?.trim() || (draft.kind === "link" ? hostnameFor(draft.url) : "Untitled"),
+      price: priceActive ? draft.price : "",
+      currency: priceActive ? draft.currency : "",
       wishlist: wishlistActive ? { category: wishlistDraft.category, garment: wishlistDraft.garment } : null,
       boardIds: wishlistActive
         ? [...new Set([...draft.boardIds, WISHLIST_BOARD_ID])]

@@ -554,8 +554,10 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .photo-source-row { display: flex; gap: 10px; margin-bottom: 16px; }
 .photo-source-row .text-btn { flex: 1; text-align: center; }
 
-/* Wishlist heart toggle (used in save flow + card detail) */
-.wishlist-toggle-btn {
+/* Toggle pills — wishlist heart (save flow + card detail) and the price
+   include/exclude toggle share the same look. */
+.wishlist-toggle-btn,
+.price-toggle-btn {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -569,7 +571,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   font-size: 0.95rem;
   margin-bottom: 16px;
 }
-.wishlist-toggle-icon {
+.wishlist-toggle-icon,
+.price-toggle-icon {
   width: 1.3rem;
   height: 1.3rem;
   fill: none;
@@ -577,12 +580,14 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   stroke-width: 2;
   flex-shrink: 0;
 }
-.wishlist-toggle-btn.active {
+.wishlist-toggle-btn.active,
+.price-toggle-btn.active {
   border-color: var(--accent);
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
 }
-.wishlist-toggle-btn.active .wishlist-toggle-icon { fill: var(--accent); stroke: var(--accent); }
+.wishlist-toggle-btn.active .wishlist-toggle-icon,
+.price-toggle-btn.active .price-toggle-icon { fill: var(--accent); stroke: var(--accent); }
 
 /* Board chip picker (used in save flow + card detail) */
 .board-chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
@@ -863,6 +868,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 :root[data-theme="playful"] .board-chip { border-radius: 20px; }
 :root[data-theme="playful"] .pinned-row,
 :root[data-theme="playful"] .wishlist-toggle-btn,
+:root[data-theme="playful"] .price-toggle-btn,
 :root[data-theme="playful"] .add-item-row input { border-radius: 16px; }
 
 /* Playful theme: bouncier, more energetic press feedback. */
