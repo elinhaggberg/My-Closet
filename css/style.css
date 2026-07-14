@@ -782,6 +782,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .instructions-body section p + p { margin-top: 8px; }
 .instructions-body strong { color: var(--text); }
 
+/* Customize sheet */
+.home-title-field { margin: 4px 0 20px; }
+
 /* Theme picker */
 .theme-option-list { display: flex; gap: 10px; padding: 4px 0 20px; }
 .theme-option {

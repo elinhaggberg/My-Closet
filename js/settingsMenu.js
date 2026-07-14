@@ -1,5 +1,5 @@
 import { openSheet } from "./sheet.js";
-import { exportBackupData, importData, getUnit, setUnit } from "./storage.js";
+import { exportBackupData, importData, getUnit, setUnit, getHomeTitle, setHomeTitle } from "./storage.js";
 import { shareOrDownload } from "./share.js";
 import { getTheme, setTheme } from "./theme.js";
 
@@ -41,6 +41,14 @@ function openCustomize() {
   const sheet = openSheet("tpl-customize");
   const el = sheet.el;
   el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
+
+  const titleInput = el.querySelector("#home-title-input");
+  titleInput.value = getHomeTitle();
+  titleInput.addEventListener("input", () => {
+    setHomeTitle(titleInput.value);
+    const homeTitleEl = document.getElementById("home-title");
+    if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
+  });
 
   const accentPicker = el.querySelector("#playful-accent-picker");
   const themeButtons = el.querySelectorAll(".theme-option");

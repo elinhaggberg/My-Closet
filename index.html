@@ -28,7 +28,7 @@
   <!-- ===== Home ===== -->
   <template id="tpl-home">
     <header class="topbar home-topbar">
-      <h1>My Closet</h1>
+      <h1 id="home-title">My Closet</h1>
       <button class="icon-btn settings-btn" id="settings-btn" aria-label="Menu"><svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.2" stroke-linecap="round"><path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17"/></svg></button>
     </header>
     <div class="page-body">
@@ -447,6 +447,10 @@
         <h2>Customize</h2>
         <button class="icon-btn close-btn" aria-label="Close"><svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg></button>
       </header>
+      <label class="field home-title-field">
+        <span>Home screen title</span>
+        <input type="text" id="home-title-input" maxlength="24" placeholder="My Closet" autocomplete="off" />
+      </label>
       <div class="theme-option-list">
         <button type="button" class="theme-option" data-theme-mode="playful">
           <span class="theme-swatch-preview playful"></span>
