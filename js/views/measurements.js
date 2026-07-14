@@ -22,6 +22,10 @@ function formatValuesLine(values, unit) {
   return parts.length ? parts.join(" · ") : "No values";
 }
 
+function renderTableRows(pairs) {
+  return pairs.map(([label, value]) => `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`).join("");
+}
+
 export function renderMeasurements(root, nav) {
   const tpl = document.getElementById("tpl-measurements");
   root.replaceChildren(tpl.content.cloneNode(true));
@@ -51,20 +55,22 @@ export function renderMeasurements(root, nav) {
     }
 
     const sections = [];
+    const filledDims = latest ? DIMENSIONS.filter((d) => latest.values?.[d.key] != null) : [];
 
-    if (latest) {
+    if (latest && filledDims.length > 0) {
+      const rows = renderTableRows(filledDims.map((d) => [d.label, `${latest.values[d.key]} ${unit}`]));
       sections.push(`
         <p class="card-detail-section-label">Latest measurements</p>
         <p class="measure-history-date">${escapeHtml(formatDate(latest.date))}</p>
-        <p class="measure-history-values" style="margin-bottom:16px;">${escapeHtml(formatValuesLine(latest.values, unit))}</p>
+        <div class="measure-table-card"><table class="measure-table"><tbody>${rows}</tbody></table></div>
       `);
     }
 
     if (filledPrefs.length > 0) {
-      const prefLine = filledPrefs.map((c) => `${c.label}: ${sizePrefs[c.id]}`).join(" · ");
+      const rows = renderTableRows(filledPrefs.map((c) => [c.label, sizePrefs[c.id]]));
       sections.push(`
         <p class="card-detail-section-label">Size preferences</p>
-        <p class="measure-history-values" style="margin-bottom:16px;">${escapeHtml(prefLine)}</p>
+        <div class="measure-table-card"><table class="measure-table"><tbody>${rows}</tbody></table></div>
       `);
     }
 
