@@ -104,6 +104,12 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   display: block;
   fill: currentColor;
 }
+/* For an icon embedded mid-sentence in running text — .icon's display:block
+   is right everywhere else (buttons, badges) but forces its own line here. */
+.icon-inline {
+  display: inline-block;
+  vertical-align: -0.15em;
+}
 .icon-line {
   fill: none;
   stroke: currentColor;

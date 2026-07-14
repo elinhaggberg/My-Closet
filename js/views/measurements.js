@@ -45,7 +45,8 @@ export function renderMeasurements(root, nav) {
     const filledPrefs = SIZE_PREF_CATEGORIES.filter((c) => sizePrefs[c.id]);
 
     if (!latest && filledPrefs.length === 0 && !notes) {
-      container.innerHTML = `<p class="empty-state" style="margin-top:8px;">Press ${ICON_PEN} to add your measurements and preferred sizes.</p>`;
+      const inlinePen = ICON_PEN.replace('class="icon"', 'class="icon icon-inline"');
+      container.innerHTML = `<p class="empty-state" style="margin-top:8px;">Press ${inlinePen} to add your measurements and preferred sizes.</p>`;
       return;
     }
 
