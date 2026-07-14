@@ -3,6 +3,8 @@ const BOARDS_KEY = "mc_boards_v1";
 const MEASUREMENTS_KEY = "mc_measurements_v1";
 const THEME_KEY = "mc_theme_v1";
 const UNIT_KEY = "mc_unit_v1";
+const SIZE_PREFS_KEY = "mc_size_prefs_v1";
+const MEASUREMENT_NOTES_KEY = "mc_measurement_notes_v1";
 
 export const WISHLIST_BOARD_ID = "wishlist";
 
@@ -157,6 +159,25 @@ export function createEmptyMeasurement() {
   return { id: uid(), date: new Date().toISOString().slice(0, 10), values: {}, note: "" };
 }
 
+// A single persistent record of "sizes I usually wear" per garment
+// category, kept separate from the dated measurement history — this is
+// just a memory aid, not part of the wishlist sizing comparison.
+export function getSizePrefs() {
+  return readJSON(SIZE_PREFS_KEY, {});
+}
+
+export function setSizePrefs(prefs) {
+  writeJSON(SIZE_PREFS_KEY, prefs);
+}
+
+export function getMeasurementNotes() {
+  return localStorage.getItem(MEASUREMENT_NOTES_KEY) || "";
+}
+
+export function setMeasurementNotes(text) {
+  localStorage.setItem(MEASUREMENT_NOTES_KEY, text);
+}
+
 // ---- Export / import ----
 
 function referencedBoards(cards) {
@@ -173,6 +194,8 @@ export function exportBackupData() {
     cards: getCards(),
     boards: getBoards().filter((b) => !b.isSystem),
     measurements: getMeasurements(),
+    sizePrefs: getSizePrefs(),
+    measurementNotes: getMeasurementNotes(),
   };
 }
 
@@ -229,6 +252,23 @@ export function importData(data) {
     const existing = readJSON(MEASUREMENTS_KEY, []);
     const remapped = importedMeasurements.map((m) => ({ ...m, id: uid() }));
     writeJSON(MEASUREMENTS_KEY, [...existing, ...remapped]);
+  }
+
+  // Size preferences and the general measurement notes are single blobs
+  // rather than lists, so a straight "add as new" doesn't apply — fill in
+  // only what's missing locally instead of overwriting anything you've
+  // already filled in yourself.
+  if (data.sizePrefs && typeof data.sizePrefs === "object") {
+    const current = getSizePrefs();
+    const merged = { ...current };
+    for (const [key, value] of Object.entries(data.sizePrefs)) {
+      if (!merged[key] && value) merged[key] = value;
+    }
+    setSizePrefs(merged);
+  }
+  if (data.measurementNotes) {
+    const current = getMeasurementNotes();
+    setMeasurementNotes(current ? `${current}\n\n${data.measurementNotes}` : data.measurementNotes);
   }
 
   return { cardCount: newCards.length, boardCount: importedBoards.length, measurementCount: importedMeasurements.length };

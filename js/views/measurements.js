@@ -1,5 +1,16 @@
-import { getMeasurements, saveMeasurement, deleteMeasurement, createEmptyMeasurement, getLatestMeasurement, getUnit } from "../storage.js";
-import { DIMENSIONS } from "../sizing.js";
+import {
+  getMeasurements,
+  saveMeasurement,
+  deleteMeasurement,
+  createEmptyMeasurement,
+  getLatestMeasurement,
+  getUnit,
+  getSizePrefs,
+  setSizePrefs,
+  getMeasurementNotes,
+  setMeasurementNotes,
+} from "../storage.js";
+import { DIMENSIONS, CATEGORIES } from "../sizing.js";
 import { formatDate } from "../util.js";
 import { openSheet } from "../sheet.js";
 
@@ -46,6 +57,34 @@ export function renderMeasurements(root, nav) {
     saveMeasurement(entry);
     form.note.value = "";
     renderHistory();
+  });
+
+  const sizePrefs = getSizePrefs();
+  const sizePrefFieldsContainer = document.getElementById("size-pref-fields");
+  sizePrefFieldsContainer.replaceChildren(
+    ...CATEGORIES.map((cat) => {
+      const label = document.createElement("label");
+      label.className = "field";
+      const span = document.createElement("span");
+      span.textContent = cat.label;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = 20;
+      input.placeholder = "e.g. M";
+      input.value = sizePrefs[cat.id] || "";
+      input.addEventListener("input", () => {
+        sizePrefs[cat.id] = input.value;
+        setSizePrefs(sizePrefs);
+      });
+      label.append(span, input);
+      return label;
+    })
+  );
+
+  const notesInput = document.getElementById("measurement-notes");
+  notesInput.value = getMeasurementNotes();
+  notesInput.addEventListener("input", () => {
+    setMeasurementNotes(notesInput.value);
   });
 
   renderHistory();

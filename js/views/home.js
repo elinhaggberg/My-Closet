@@ -1,6 +1,7 @@
 import { getCards } from "../storage.js";
 import { createPinNode } from "../pin.js";
 import { renderTabbar } from "../tabbar.js";
+import { renderMasonry } from "../masonry.js";
 import { openSaveChoice } from "../save.js";
 import { openCardDetail } from "../cardDetail.js";
 import { openSettingsMenu } from "../settingsMenu.js";
@@ -25,6 +26,6 @@ export function renderHome(root, nav) {
       grid.replaceChildren(empty);
       return;
     }
-    grid.replaceChildren(...cards.map((card) => createPinNode(card, (c) => openCardDetail(nav, c, renderList))));
+    renderMasonry(grid, cards, (card) => createPinNode(card, (c) => openCardDetail(nav, c, renderList)));
   }
 }

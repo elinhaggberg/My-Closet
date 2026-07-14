@@ -195,16 +195,25 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .tab-btn.active { color: var(--accent); }
 
 /* Card grid (Pinterest-style masonry via CSS columns) */
+/* Pinterest-style masonry: real flex columns (built in JS by masonry.js)
+   rather than CSS multi-columns, so cards keep their natural flexible
+   height and get bin-packed into whichever column is shortest instead of
+   filling one column top-to-bottom before starting the next. */
 .card-grid {
-  columns: 2;
-  column-gap: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   padding: 4px 16px 16px;
 }
-@media (min-width: 420px) { .card-grid { columns: 3; } }
+.pin-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
 
 .pin {
-  break-inside: avoid;
-  margin-bottom: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -544,6 +553,14 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .measure-history-date { font-weight: 700; font-size: 0.95rem; margin: 0 0 6px; }
 .measure-history-values { font-size: 0.85rem; color: var(--text-dim); line-height: 1.6; }
 .measure-history-actions { display: flex; justify-content: flex-end; gap: 4px; margin-top: 6px; }
+
+.size-pref-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-bottom: 16px;
+}
+.size-pref-grid .field { margin-bottom: 12px; }
 
 /* Floating action button */
 .fab {

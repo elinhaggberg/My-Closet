@@ -1,6 +1,7 @@
 import { getBoard, getCardsForBoard, deleteBoard, renameBoard, exportBoardData, WISHLIST_BOARD_ID } from "../storage.js";
 import { renderTabbar } from "../tabbar.js";
 import { createPinNode } from "../pin.js";
+import { renderMasonry } from "../masonry.js";
 import { openSaveChoice } from "../save.js";
 import { openCardDetail } from "../cardDetail.js";
 import { openSheet } from "../sheet.js";
@@ -41,7 +42,7 @@ export function renderBoard(root, nav, boardId) {
       grid.replaceChildren(empty);
       return;
     }
-    grid.replaceChildren(...cards.map((card) => createPinNode(card, (c) => openCardDetail(nav, c, renderList))));
+    renderMasonry(grid, cards, (card) => createPinNode(card, (c) => openCardDetail(nav, c, renderList)));
   }
 
   function openBoardMenu() {
