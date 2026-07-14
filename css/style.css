@@ -127,6 +127,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   flex-shrink: 0;
 }
 .icon-btn:active { background: var(--surface-2); }
+.settings-btn { font-size: 1.5rem; }
 
 .text-btn {
   padding: 8px 14px;
