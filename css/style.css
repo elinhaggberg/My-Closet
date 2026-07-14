@@ -127,6 +127,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   flex-shrink: 0;
 }
 .icon-btn:active { background: var(--surface-2); }
+.settings-btn { font-size: 1.5rem; }
 
 .text-btn {
   padding: 8px 14px;
@@ -158,6 +159,16 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   padding: 0 32px;
   font-size: 0.95rem;
   line-height: 1.5;
+}
+/* As the lone child of a flex (.card-grid) or grid (.board-grid) container,
+   it otherwise shrinks to content width and sits at the start instead of
+   spanning the row — which makes text-align:center center within a narrow
+   box off to the left rather than across the full page. */
+.card-grid > .empty-state,
+.board-grid > .empty-state {
+  width: 100%;
+  flex: 1 1 100%;
+  grid-column: 1 / -1;
 }
 
 /* Scrollable body area between topbar and the tab bar / fab */
