@@ -5,6 +5,7 @@ const THEME_KEY = "mc_theme_v1";
 const UNIT_KEY = "mc_unit_v1";
 const SIZE_PREFS_KEY = "mc_size_prefs_v1";
 const MEASUREMENT_NOTES_KEY = "mc_measurement_notes_v1";
+const CHECKLISTS_KEY = "mc_checklists_v1";
 
 export const WISHLIST_BOARD_ID = "wishlist";
 
@@ -178,6 +179,48 @@ export function setMeasurementNotes(text) {
   localStorage.setItem(MEASUREMENT_NOTES_KEY, text);
 }
 
+// ---- Lists (checklists) ----
+// Simple named checklists — e.g. "things to look for" shopping lists —
+// kept separate from cards/boards since they have no image/link/price.
+
+export function getChecklists() {
+  return readJSON(CHECKLISTS_KEY, []);
+}
+
+export function getChecklist(id) {
+  return getChecklists().find((l) => l.id === id) || null;
+}
+
+export function createChecklist(name) {
+  const lists = getChecklists();
+  const list = { id: uid(), name: name.trim(), createdAt: Date.now(), items: [] };
+  lists.push(list);
+  writeJSON(CHECKLISTS_KEY, lists);
+  return list;
+}
+
+export function saveChecklist(list) {
+  const lists = getChecklists();
+  const idx = lists.findIndex((l) => l.id === list.id);
+  if (idx >= 0) lists[idx] = list;
+  else lists.push(list);
+  writeJSON(CHECKLISTS_KEY, lists);
+  return list;
+}
+
+export function deleteChecklist(id) {
+  writeJSON(CHECKLISTS_KEY, getChecklists().filter((l) => l.id !== id));
+}
+
+export function exportChecklistData(list) {
+  return {
+    type: "checklist",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    checklists: [list],
+  };
+}
+
 // ---- Export / import ----
 
 function referencedBoards(cards) {
@@ -196,6 +239,7 @@ export function exportBackupData() {
     measurements: getMeasurements(),
     sizePrefs: getSizePrefs(),
     measurementNotes: getMeasurementNotes(),
+    checklists: getChecklists(),
   };
 }
 
@@ -220,15 +264,38 @@ export function exportBoardData(board) {
   };
 }
 
-// All export shapes carry the same { cards, boards } structure (plus an
-// optional top-level measurements array), so one import path handles a
-// single card, a single board, or a full backup alike. Always merges (adds
-// new entries) rather than replacing anything, so a bad or repeated import
-// can't destroy existing data — boards merge by name (system Wishlist maps
-// straight to the local Wishlist), cards and measurements are always added
-// as new.
+function importChecklists(data) {
+  const importedChecklists = Array.isArray(data.checklists) ? data.checklists : [];
+  if (importedChecklists.length) {
+    const newLists = importedChecklists.map((l) => ({
+      ...l,
+      id: uid(),
+      createdAt: Date.now(),
+      items: (l.items || []).map((item) => ({ ...item, id: uid() })),
+    }));
+    writeJSON(CHECKLISTS_KEY, [...getChecklists(), ...newLists]);
+  }
+  return importedChecklists.length;
+}
+
+// All export shapes carry the same { cards, boards } structure (plus
+// optional top-level measurements/checklists arrays), so one import path
+// handles a single card, a single board, a single checklist, or a full
+// backup alike. Always merges (adds new entries) rather than replacing
+// anything, so a bad or repeated import can't destroy existing data —
+// boards merge by name (system Wishlist maps straight to the local
+// Wishlist), cards/measurements/checklists are always added as new.
 export function importData(data) {
-  if (!data || !["backup", "card", "board"].includes(data.type) || !Array.isArray(data.cards)) {
+  if (!data || !["backup", "card", "board", "checklist"].includes(data.type)) {
+    throw new Error("That doesn't look like a My Closet export file.");
+  }
+
+  if (data.type === "checklist") {
+    const checklistCount = importChecklists(data);
+    return { cardCount: 0, boardCount: 0, measurementCount: 0, checklistCount };
+  }
+
+  if (!Array.isArray(data.cards)) {
     throw new Error("That doesn't look like a My Closet export file.");
   }
 
@@ -271,7 +338,9 @@ export function importData(data) {
     setMeasurementNotes(current ? `${current}\n\n${data.measurementNotes}` : data.measurementNotes);
   }
 
-  return { cardCount: newCards.length, boardCount: importedBoards.length, measurementCount: importedMeasurements.length };
+  const checklistCount = importChecklists(data);
+
+  return { cardCount: newCards.length, boardCount: importedBoards.length, measurementCount: importedMeasurements.length, checklistCount };
 }
 
 // ---- Preferences ----

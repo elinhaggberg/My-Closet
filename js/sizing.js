@@ -21,6 +21,19 @@ export const CATEGORIES = [
   { id: "shoes", label: "Shoes", dims: ["footLength"] },
 ];
 
+// The categories shown in "my current size preferences" — a plain memory
+// aid on the Measurements page. Bra size has no numeric body dimension to
+// compare against, so it's only meaningful here, not as a wishlist garment
+// category (CATEGORIES, below), which drives the actual sizing comparison.
+export const SIZE_PREF_CATEGORIES = [
+  { id: "top", label: "Top" },
+  { id: "bottom", label: "Bottom" },
+  { id: "dress", label: "Dress" },
+  { id: "outerwear", label: "Outerwear" },
+  { id: "shoes", label: "Shoes" },
+  { id: "bra", label: "Bra size" },
+];
+
 export function dimLabel(key) {
   return DIMENSIONS.find((d) => d.key === key)?.label || key;
 }

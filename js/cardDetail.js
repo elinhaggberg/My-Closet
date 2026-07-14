@@ -1,4 +1,4 @@
-import { getCard, saveCard, deleteCard, exportCardData } from "./storage.js";
+import { getCard, saveCard, deleteCard, exportCardData, WISHLIST_BOARD_ID, makeWishlistFields } from "./storage.js";
 import { openSheet } from "./sheet.js";
 import { shareOrDownload, filenameFor } from "./share.js";
 import { formatPrice, hostnameFor } from "./util.js";
@@ -39,6 +39,24 @@ export function openCardDetail(nav, cardRef, refresh) {
     noteEl.textContent = card.note;
     noteEl.classList.remove("hidden");
   }
+
+  const wishlistToggle = el.querySelector("#detail-wishlist-toggle");
+  const wishlistToggleLabel = wishlistToggle.querySelector(".wishlist-toggle-label");
+  wishlistToggle.classList.toggle("active", !!card.wishlist);
+  wishlistToggleLabel.textContent = card.wishlist ? "In your wishlist" : "Add to wishlist";
+  wishlistToggle.addEventListener("click", () => {
+    if (card.wishlist) {
+      card.wishlist = null;
+      card.boardIds = card.boardIds.filter((id) => id !== WISHLIST_BOARD_ID);
+    } else {
+      card.wishlist = makeWishlistFields();
+      if (!card.boardIds.includes(WISHLIST_BOARD_ID)) card.boardIds.push(WISHLIST_BOARD_ID);
+    }
+    saveCard(card);
+    refresh();
+    sheet.close();
+    openCardDetail(nav, card, refresh);
+  });
 
   if (card.wishlist) {
     renderSizeBox(el.querySelector("#detail-size-box"), card.wishlist.category, card.wishlist.garment);

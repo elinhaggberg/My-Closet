@@ -175,10 +175,16 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
   const sizePreviewEl = document.createElement("div");
   wishlistBlock.appendChild(sizePreviewEl);
 
-  wishlistToggle.checked = wishlistActive;
+  const wishlistToggleLabel = wishlistToggle.querySelector(".wishlist-toggle-label");
+  function renderWishlistToggle() {
+    wishlistToggle.classList.toggle("active", wishlistActive);
+    wishlistToggleLabel.textContent = wishlistActive ? "In your wishlist" : "Add to wishlist";
+  }
+  renderWishlistToggle();
   wishlistBlock.classList.toggle("hidden", !wishlistActive);
-  wishlistToggle.addEventListener("change", () => {
-    wishlistActive = wishlistToggle.checked;
+  wishlistToggle.addEventListener("click", () => {
+    wishlistActive = !wishlistActive;
+    renderWishlistToggle();
     wishlistBlock.classList.toggle("hidden", !wishlistActive);
   });
 

@@ -17,10 +17,10 @@ export function renderBoard(root, nav, boardId) {
   const isWishlist = board.id === WISHLIST_BOARD_ID;
   const tpl = document.getElementById("tpl-board");
   root.replaceChildren(tpl.content.cloneNode(true));
-  renderTabbar(root, nav, isWishlist ? "wishlist" : "boards");
+  renderTabbar(root, nav, "boards");
 
   document.getElementById("board-title").textContent = board.name;
-  root.querySelector(".back-btn").addEventListener("click", () => (isWishlist ? nav.toHome() : nav.toBoards()));
+  root.querySelector(".back-btn").addEventListener("click", () => nav.toBoards());
 
   const menuBtn = document.getElementById("board-menu-btn");
   if (!isWishlist) {

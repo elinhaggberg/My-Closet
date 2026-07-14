@@ -101,7 +101,10 @@ function openImport(refresh) {
     }
     try {
       const result = importData(parsed);
-      messageEl.textContent = `Imported ${result.cardCount} item${result.cardCount !== 1 ? "s" : ""}.`;
+      const parts = [];
+      if (result.cardCount) parts.push(`${result.cardCount} item${result.cardCount !== 1 ? "s" : ""}`);
+      if (result.checklistCount) parts.push(`${result.checklistCount} list${result.checklistCount !== 1 ? "s" : ""}`);
+      messageEl.textContent = parts.length ? `Imported ${parts.join(" and ")}.` : "Import complete.";
       if (refresh) refresh();
       setTimeout(() => sheet.close(), 900);
     } catch (err) {

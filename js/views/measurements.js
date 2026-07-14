@@ -10,9 +10,17 @@ import {
   getMeasurementNotes,
   setMeasurementNotes,
 } from "../storage.js";
-import { DIMENSIONS, CATEGORIES } from "../sizing.js";
-import { formatDate } from "../util.js";
+import { DIMENSIONS, SIZE_PREF_CATEGORIES } from "../sizing.js";
+import { formatDate, escapeHtml } from "../util.js";
 import { openSheet } from "../sheet.js";
+import { ICON_PEN } from "../icons.js";
+
+// Values are numbers and our own dimension labels, so this is always safe
+// to use as plain text (textContent) or, escaped, as innerHTML.
+function formatValuesLine(values, unit) {
+  const parts = DIMENSIONS.filter((d) => values?.[d.key] != null).map((d) => `${d.label}: ${values[d.key]}${unit}`);
+  return parts.length ? parts.join(" · ") : "No values";
+}
 
 export function renderMeasurements(root, nav) {
   const tpl = document.getElementById("tpl-measurements");
@@ -20,74 +28,54 @@ export function renderMeasurements(root, nav) {
   root.querySelector(".back-btn").addEventListener("click", () => nav.toHome());
 
   const unit = getUnit();
-  const form = document.getElementById("measurement-form");
-  form.date.value = new Date().toISOString().slice(0, 10);
+  document.getElementById("measurements-edit-btn").addEventListener("click", () => openEditSheet(renderAll));
 
-  const latest = getLatestMeasurement();
-  const inputs = {};
-  const fieldsContainer = document.getElementById("measurement-value-fields");
-  fieldsContainer.replaceChildren(
-    ...DIMENSIONS.map((dim) => {
-      const label = document.createElement("label");
-      label.className = "field";
-      const span = document.createElement("span");
-      span.textContent = `${dim.label} (${unit})`;
-      const input = document.createElement("input");
-      input.type = "number";
-      input.step = "0.1";
-      input.min = "0";
-      input.name = dim.key;
-      if (latest?.values?.[dim.key] != null) input.value = latest.values[dim.key];
-      label.append(span, input);
-      inputs[dim.key] = input;
-      return label;
-    })
-  );
+  renderAll();
 
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const entry = createEmptyMeasurement();
-    entry.date = form.date.value || entry.date;
-    entry.note = form.note.value.trim();
-    entry.values = {};
-    for (const dim of DIMENSIONS) {
-      const v = inputs[dim.key].value;
-      if (v !== "") entry.values[dim.key] = Number(v);
-    }
-    saveMeasurement(entry);
-    form.note.value = "";
+  function renderAll() {
+    renderOverview();
     renderHistory();
-  });
+  }
 
-  const sizePrefs = getSizePrefs();
-  const sizePrefFieldsContainer = document.getElementById("size-pref-fields");
-  sizePrefFieldsContainer.replaceChildren(
-    ...CATEGORIES.map((cat) => {
-      const label = document.createElement("label");
-      label.className = "field";
-      const span = document.createElement("span");
-      span.textContent = cat.label;
-      const input = document.createElement("input");
-      input.type = "text";
-      input.maxLength = 20;
-      input.placeholder = "e.g. M";
-      input.value = sizePrefs[cat.id] || "";
-      input.addEventListener("input", () => {
-        sizePrefs[cat.id] = input.value;
-        setSizePrefs(sizePrefs);
-      });
-      label.append(span, input);
-      return label;
-    })
-  );
+  function renderOverview() {
+    const container = document.getElementById("measurements-overview");
+    const latest = getLatestMeasurement();
+    const sizePrefs = getSizePrefs();
+    const notes = getMeasurementNotes();
+    const filledPrefs = SIZE_PREF_CATEGORIES.filter((c) => sizePrefs[c.id]);
 
-  const notesInput = document.getElementById("measurement-notes");
-  notesInput.value = getMeasurementNotes();
-  notesInput.addEventListener("input", () => {
-    setMeasurementNotes(notesInput.value);
-  });
+    if (!latest && filledPrefs.length === 0 && !notes) {
+      container.innerHTML = `<p class="empty-state" style="margin-top:8px;">Press ${ICON_PEN} to add your measurements and preferred sizes.</p>`;
+      return;
+    }
 
-  renderHistory();
+    const sections = [];
+
+    if (latest) {
+      sections.push(`
+        <p class="card-detail-section-label">Latest measurements</p>
+        <p class="measure-history-date">${escapeHtml(formatDate(latest.date))}</p>
+        <p class="measure-history-values" style="margin-bottom:16px;">${escapeHtml(formatValuesLine(latest.values, unit))}</p>
+      `);
+    }
+
+    if (filledPrefs.length > 0) {
+      const prefLine = filledPrefs.map((c) => `${c.label}: ${sizePrefs[c.id]}`).join(" · ");
+      sections.push(`
+        <p class="card-detail-section-label">Size preferences</p>
+        <p class="measure-history-values" style="margin-bottom:16px;">${escapeHtml(prefLine)}</p>
+      `);
+    }
+
+    if (notes) {
+      sections.push(`
+        <p class="card-detail-section-label">Notes</p>
+        <p class="card-detail-note">${escapeHtml(notes)}</p>
+      `);
+    }
+
+    container.innerHTML = sections.join("");
+  }
 
   function renderHistory() {
     const list = document.getElementById("measure-history");
@@ -112,8 +100,7 @@ export function renderMeasurements(root, nav) {
 
     const values = document.createElement("p");
     values.className = "measure-history-values";
-    const parts = DIMENSIONS.filter((d) => entry.values?.[d.key] != null).map((d) => `${d.label}: ${entry.values[d.key]}${unit}`);
-    values.textContent = parts.length ? parts.join(" · ") : "No values";
+    values.textContent = formatValuesLine(entry.values, unit);
 
     const actions = document.createElement("div");
     actions.className = "measure-history-actions";
@@ -130,7 +117,7 @@ export function renderMeasurements(root, nav) {
       sheet.el.querySelector(".confirm-btn").addEventListener("click", () => {
         deleteMeasurement(entry.id);
         sheet.close();
-        renderHistory();
+        renderAll();
       });
     });
     actions.appendChild(delBtn);
@@ -138,4 +125,83 @@ export function renderMeasurements(root, nav) {
     div.append(date, values, actions);
     return div;
   }
+}
+
+function openEditSheet(onSaved) {
+  const sheet = openSheet("tpl-measurements-edit");
+  const el = sheet.el;
+  el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
+
+  const unit = getUnit();
+  const form = el.querySelector("#measurement-edit-form");
+  form.date.value = new Date().toISOString().slice(0, 10);
+
+  const latest = getLatestMeasurement();
+  const inputs = {};
+  const fieldsContainer = el.querySelector("#measurement-value-fields");
+  fieldsContainer.replaceChildren(
+    ...DIMENSIONS.map((dim) => {
+      const label = document.createElement("label");
+      label.className = "field";
+      const span = document.createElement("span");
+      span.textContent = `${dim.label} (${unit})`;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.1";
+      input.min = "0";
+      input.name = dim.key;
+      if (latest?.values?.[dim.key] != null) input.value = latest.values[dim.key];
+      label.append(span, input);
+      inputs[dim.key] = input;
+      return label;
+    })
+  );
+
+  const sizePrefs = getSizePrefs();
+  const prefInputs = {};
+  const prefFieldsContainer = el.querySelector("#size-pref-fields");
+  prefFieldsContainer.replaceChildren(
+    ...SIZE_PREF_CATEGORIES.map((cat) => {
+      const label = document.createElement("label");
+      label.className = "field";
+      const span = document.createElement("span");
+      span.textContent = cat.label;
+      const input = document.createElement("input");
+      input.type = "text";
+      input.maxLength = 20;
+      input.placeholder = "e.g. M";
+      input.value = sizePrefs[cat.id] || "";
+      label.append(span, input);
+      prefInputs[cat.id] = input;
+      return label;
+    })
+  );
+
+  form.generalNote.value = getMeasurementNotes();
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+
+    const entry = createEmptyMeasurement();
+    entry.date = form.date.value || entry.date;
+    entry.note = form.snapshotNote.value.trim();
+    entry.values = {};
+    for (const dim of DIMENSIONS) {
+      const v = inputs[dim.key].value;
+      if (v !== "") entry.values[dim.key] = Number(v);
+    }
+    saveMeasurement(entry);
+
+    const newPrefs = {};
+    for (const cat of SIZE_PREF_CATEGORIES) {
+      const v = prefInputs[cat.id].value.trim();
+      if (v) newPrefs[cat.id] = v;
+    }
+    setSizePrefs(newPrefs);
+
+    setMeasurementNotes(form.generalNote.value.trim());
+
+    sheet.close();
+    onSaved();
+  });
 }
