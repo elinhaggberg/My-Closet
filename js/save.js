@@ -27,7 +27,7 @@ export function openSaveChoice(nav, refresh, presetBoardId) {
   });
 }
 
-export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
+export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoFetch }) {
   const draft = { ...card, boardIds: [...card.boardIds] };
   let wishlistActive = !!draft.wishlist || draft.boardIds.includes(WISHLIST_BOARD_ID);
   let priceActive = !!draft.price;
@@ -70,7 +70,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
 
     const fetchBtn = el.querySelector("#editor-fetch-btn");
     const msgEl = el.querySelector("#editor-fetch-message");
-    fetchBtn.addEventListener("click", async () => {
+    async function runFetch() {
       const url = urlInput.value.trim();
       if (!url) return;
       msgEl.classList.remove("error", "hidden");
@@ -110,7 +110,12 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId }) {
       } finally {
         fetchBtn.disabled = false;
       }
-    });
+    }
+    fetchBtn.addEventListener("click", runFetch);
+    // Lets an incoming share (from the iOS Shortcut / Android share_target
+    // flow — see app.js) skip straight to "fetching" instead of making you
+    // tap Fetch yourself right after sharing a link into the app.
+    if (autoFetch && draft.url) runFetch();
   }
 
   if (draft.kind === "photo") {
