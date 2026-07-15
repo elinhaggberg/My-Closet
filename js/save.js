@@ -45,7 +45,6 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
   el.querySelector("#editor-heading").textContent = isNew ? "Save" : "Edit";
 
-  const remoteImage = el.querySelector("#editor-remote-image");
   const titleInput = el.querySelector("#editor-title");
   const priceInput = el.querySelector("#editor-price");
   const currencyInput = el.querySelector("#editor-currency");
@@ -56,105 +55,100 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
     priceBlock.classList.toggle("hidden", !priceActive);
   }
 
-  if (draft.kind === "link") {
-    el.querySelector("#editor-url-block").classList.remove("hidden");
-    const urlInput = el.querySelector("#editor-url-input");
-    urlInput.value = draft.url || "";
-    urlInput.addEventListener("input", () => {
-      draft.url = urlInput.value.trim();
-    });
+  // One shared image picker regardless of how the card was started — a
+  // fetched link and a manual photo both just set draft.image, so a card
+  // can get its picture from either source (or have it swapped after the
+  // fact), rather than being locked into whichever you picked first.
+  const dropEl = el.querySelector("#photo-drop");
+  const previewWrap = el.querySelector("#photo-preview-wrap");
+  const previewImg = el.querySelector("#photo-preview-img");
+  const cameraInput = el.querySelector("#camera-input");
+  const libraryInput = el.querySelector("#library-input");
+
+  function renderImagePreview() {
     if (draft.image) {
-      remoteImage.src = draft.image;
-      remoteImage.classList.remove("hidden");
-    }
-
-    const fetchBtn = el.querySelector("#editor-fetch-btn");
-    const msgEl = el.querySelector("#editor-fetch-message");
-    async function runFetch() {
-      const url = urlInput.value.trim();
-      if (!url) return;
-      msgEl.classList.remove("error", "hidden");
-      msgEl.textContent = "Fetching…";
-      fetchBtn.disabled = true;
-      try {
-        const res = await fetch(`/api/unfurl?url=${encodeURIComponent(url)}`);
-        const data = await res.json();
-        draft.url = url;
-        if (data.title) draft.title = data.title;
-        if (data.image) draft.image = data.image;
-        if (data.price) draft.price = data.price;
-        if (data.currency) draft.currency = data.currency;
-        draft.siteName = data.siteName || hostnameFor(url);
-        titleInput.value = draft.title || "";
-        priceInput.value = draft.price || "";
-        currencyInput.value = draft.currency || "";
-        if (data.price) {
-          priceActive = true;
-          renderPriceToggle();
-        }
-        if (draft.image) {
-          remoteImage.src = draft.image;
-          remoteImage.classList.remove("hidden");
-        }
-        if (data.error) {
-          msgEl.textContent = `${data.error} You can still fill in the details yourself.`;
-          msgEl.classList.add("error");
-        } else if (data.notice) {
-          msgEl.textContent = data.notice;
-        } else {
-          msgEl.textContent = "Got it — details filled in below.";
-        }
-      } catch {
-        msgEl.textContent = "Couldn't fetch that link. You can still fill in the details yourself.";
-        msgEl.classList.add("error");
-      } finally {
-        fetchBtn.disabled = false;
-      }
-    }
-    fetchBtn.addEventListener("click", runFetch);
-    // Lets an incoming share (from the iOS Shortcut / Android share_target
-    // flow — see app.js) skip straight to "fetching" instead of making you
-    // tap Fetch yourself right after sharing a link into the app.
-    if (autoFetch && draft.url) runFetch();
-  }
-
-  if (draft.kind === "photo") {
-    el.querySelector("#editor-photo-block").classList.remove("hidden");
-    const dropEl = el.querySelector("#photo-drop");
-    const previewWrap = el.querySelector("#photo-preview-wrap");
-    const previewImg = el.querySelector("#photo-preview-img");
-    const cameraInput = el.querySelector("#camera-input");
-    const libraryInput = el.querySelector("#library-input");
-
-    function showPreview() {
       previewImg.src = draft.image;
       dropEl.classList.add("hidden");
       previewWrap.classList.remove("hidden");
-    }
-    if (draft.image) showPreview();
-
-    el.querySelector("#photo-camera-btn").addEventListener("click", () => cameraInput.click());
-    el.querySelector("#photo-library-btn").addEventListener("click", () => libraryInput.click());
-
-    async function handleFile(input) {
-      const file = input.files[0];
-      if (!file) return;
-      try {
-        draft.image = await readAndResizeImage(file);
-        showPreview();
-      } catch {
-        // Unreadable file — leave the drop control as-is so they can retry.
-      }
-    }
-    cameraInput.addEventListener("change", () => handleFile(cameraInput));
-    libraryInput.addEventListener("change", () => handleFile(libraryInput));
-
-    el.querySelector("#photo-clear-btn").addEventListener("click", () => {
-      draft.image = "";
+    } else {
       previewWrap.classList.add("hidden");
       dropEl.classList.remove("hidden");
-    });
+    }
   }
+  renderImagePreview();
+
+  el.querySelector("#photo-camera-btn").addEventListener("click", () => cameraInput.click());
+  el.querySelector("#photo-library-btn").addEventListener("click", () => libraryInput.click());
+
+  async function handleFile(input) {
+    const file = input.files[0];
+    if (!file) return;
+    try {
+      draft.image = await readAndResizeImage(file);
+      renderImagePreview();
+    } catch {
+      // Unreadable file — leave the drop control as-is so they can retry.
+    }
+  }
+  cameraInput.addEventListener("change", () => handleFile(cameraInput));
+  libraryInput.addEventListener("change", () => handleFile(libraryInput));
+
+  el.querySelector("#photo-clear-btn").addEventListener("click", () => {
+    draft.image = "";
+    renderImagePreview();
+  });
+
+  const urlInput = el.querySelector("#editor-url-input");
+  urlInput.value = draft.url || "";
+  urlInput.addEventListener("input", () => {
+    draft.url = urlInput.value.trim();
+  });
+
+  const fetchBtn = el.querySelector("#editor-fetch-btn");
+  const msgEl = el.querySelector("#editor-fetch-message");
+  async function runFetch() {
+    const url = urlInput.value.trim();
+    if (!url) return;
+    msgEl.classList.remove("error", "hidden");
+    msgEl.textContent = "Fetching…";
+    fetchBtn.disabled = true;
+    try {
+      const res = await fetch(`/api/unfurl?url=${encodeURIComponent(url)}`);
+      const data = await res.json();
+      draft.url = url;
+      if (data.title) draft.title = data.title;
+      if (data.image) draft.image = data.image;
+      if (data.price) draft.price = data.price;
+      if (data.currency) draft.currency = data.currency;
+      draft.siteName = data.siteName || hostnameFor(url);
+      titleInput.value = draft.title || "";
+      priceInput.value = draft.price || "";
+      currencyInput.value = draft.currency || "";
+      if (data.price) {
+        priceActive = true;
+        renderPriceToggle();
+      }
+      renderImagePreview();
+      if (data.error) {
+        msgEl.textContent = `${data.error} You can still fill in the details yourself, or add your own photo below.`;
+        msgEl.classList.add("error");
+      } else if (data.notice) {
+        msgEl.textContent = `${data.notice} You can add your own photo below instead.`;
+      } else {
+        msgEl.textContent = "Got it — details filled in below.";
+      }
+    } catch {
+      msgEl.textContent = "Couldn't fetch that link. You can still fill in the details yourself.";
+      msgEl.classList.add("error");
+    } finally {
+      fetchBtn.disabled = false;
+    }
+  }
+  fetchBtn.addEventListener("click", runFetch);
+  // Lets an incoming share (from the iOS Shortcut / Android share_target
+  // flow — see app.js) skip straight to "fetching" instead of making you
+  // tap Fetch yourself right after sharing a link into the app.
+  if (autoFetch && draft.url) runFetch();
 
   titleInput.value = draft.title || "";
   titleInput.addEventListener("input", () => {
@@ -257,7 +251,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   el.querySelector("#editor-save-btn").addEventListener("click", () => {
     const finalCard = {
       ...draft,
-      title: draft.title?.trim() || (draft.kind === "link" ? hostnameFor(draft.url) : "Untitled"),
+      title: draft.title?.trim() || (draft.url ? hostnameFor(draft.url) : "Untitled"),
       price: priceActive ? draft.price : "",
       currency: priceActive ? draft.currency : "",
       wishlist: wishlistActive ? { category: wishlistDraft.category, garment: wishlistDraft.garment } : null,
