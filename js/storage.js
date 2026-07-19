@@ -7,7 +7,7 @@ const SIZE_PREFS_KEY = "mc_size_prefs_v1";
 const MEASUREMENT_NOTES_KEY = "mc_measurement_notes_v1";
 const CHECKLISTS_KEY = "mc_checklists_v1";
 const HOME_TITLE_KEY = "mc_home_title_v1";
-const BACKUP_NOTICE_KEY = "mc_backup_notice_v1";
+const LAST_SEEN_VERSION_KEY = "mc_last_seen_version_v1";
 
 export const WISHLIST_BOARD_ID = "wishlist";
 
@@ -395,15 +395,12 @@ export function setHomeTitle(value) {
   else localStorage.removeItem(HOME_TITLE_KEY);
 }
 
-// One-time notice shown after the backup fix that added theme/unit/home
-// title to exportBackupData -- lets an existing user know their old backup
-// files are missing that data, so it's worth making a fresh one.
-export function getBackupNoticeSeen() {
-  return localStorage.getItem(BACKUP_NOTICE_KEY) === "true";
+export function getLastSeenVersion() {
+  return readJSON(LAST_SEEN_VERSION_KEY, null);
 }
 
-export function setBackupNoticeSeen() {
-  localStorage.setItem(BACKUP_NOTICE_KEY, "true");
+export function setLastSeenVersion(version) {
+  writeJSON(LAST_SEEN_VERSION_KEY, version);
 }
 
 export { uid };
