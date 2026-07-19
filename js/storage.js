@@ -241,6 +241,9 @@ export function exportBackupData() {
     sizePrefs: getSizePrefs(),
     measurementNotes: getMeasurementNotes(),
     checklists: getChecklists(),
+    theme: getThemePref(),
+    unit: getUnit(),
+    homeTitle: getHomeTitle(),
   };
 }
 
@@ -341,7 +344,26 @@ export function importData(data) {
 
   const checklistCount = importChecklists(data);
 
-  return { cardCount: newCards.length, boardCount: importedBoards.length, measurementCount: importedMeasurements.length, checklistCount };
+  // Theme, unit, and home title are single current-state settings, not
+  // lists, so a full backup restore applies them directly rather than
+  // merging -- that's what "restore my backup" means for a device's
+  // preferences. Only present on a full backup (not a single card/board/
+  // checklist share), and only fields actually in the file are touched.
+  let preferencesApplied = false;
+  if (data.type === "backup") {
+    if (data.theme) setThemePref(data.theme);
+    if (data.unit) setUnit(data.unit);
+    if (data.homeTitle) setHomeTitle(data.homeTitle);
+    preferencesApplied = Boolean(data.theme || data.unit || data.homeTitle);
+  }
+
+  return {
+    cardCount: newCards.length,
+    boardCount: importedBoards.length,
+    measurementCount: importedMeasurements.length,
+    checklistCount,
+    preferencesApplied,
+  };
 }
 
 // ---- Preferences ----

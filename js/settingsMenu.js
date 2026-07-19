@@ -112,7 +112,9 @@ function openImport(refresh) {
       const parts = [];
       if (result.cardCount) parts.push(`${result.cardCount} item${result.cardCount !== 1 ? "s" : ""}`);
       if (result.checklistCount) parts.push(`${result.checklistCount} list${result.checklistCount !== 1 ? "s" : ""}`);
-      messageEl.textContent = parts.length ? `Imported ${parts.join(" and ")}.` : "Import complete.";
+      let text = parts.length ? `Imported ${parts.join(" and ")}.` : "Import complete.";
+      if (result.preferencesApplied) text += " Restored your theme/settings too.";
+      messageEl.textContent = text;
       if (refresh) refresh();
       setTimeout(() => sheet.close(), 900);
     } catch (err) {
