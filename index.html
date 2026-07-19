@@ -31,6 +31,13 @@
       <h1 id="home-title">My Closet</h1>
       <button class="icon-btn settings-btn" id="settings-btn" aria-label="Menu"><svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.2" stroke-linecap="round"><path d="M3.5 6.5h17M3.5 12h17M3.5 17.5h17"/></svg></button>
     </header>
+    <div id="backup-banner" class="banner hidden">
+      <p>You haven't backed up in a while — export takes a second.</p>
+      <div class="banner-actions">
+        <button type="button" class="text-btn primary" id="backup-now-btn">Back up now</button>
+        <button type="button" class="text-btn" id="backup-dismiss-btn">Later</button>
+      </div>
+    </div>
     <div class="page-body">
       <p class="card-detail-section-label" style="padding:0 16px 8px;">Recently saved</p>
       <div class="card-grid" id="home-grid"></div>
