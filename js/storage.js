@@ -11,6 +11,7 @@ const LAST_SEEN_VERSION_KEY = "mc_last_seen_version_v1";
 const LAST_BACKUP_KEY = "mc_last_backup_at_v1";
 const BACKUP_BANNER_DISMISSED_KEY = "mc_backup_banner_dismissed_at_v1";
 const FIRST_OPEN_KEY = "mc_first_open_at_v1";
+const ONBOARDING_SEEN_KEY = "mc_onboarding_seen_v1";
 
 export const WISHLIST_BOARD_ID = "wishlist";
 
@@ -442,6 +443,14 @@ export function shouldShowBackupBanner() {
   if (dismissedAt && Date.now() - dismissedAt < BACKUP_SNOOZE_MS) return false;
 
   return true;
+}
+
+export function getOnboardingSeen() {
+  return localStorage.getItem(ONBOARDING_SEEN_KEY) === "true";
+}
+
+export function setOnboardingSeen() {
+  localStorage.setItem(ONBOARDING_SEEN_KEY, "true");
 }
 
 export { uid };

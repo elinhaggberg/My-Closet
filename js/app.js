@@ -8,6 +8,7 @@ import { applyTheme } from "./theme.js";
 import { createEmptyCard } from "./storage.js";
 import { openCardEditor } from "./save.js";
 import { checkWhatsNew } from "./whatsNew.js";
+import { checkOnboarding } from "./onboarding.js";
 
 applyTheme();
 
@@ -92,6 +93,7 @@ function handleIncomingShare() {
 window.addEventListener("hashchange", route);
 route();
 handleIncomingShare();
+checkOnboarding();
 checkWhatsNew();
 
 if ("serviceWorker" in navigator) {
