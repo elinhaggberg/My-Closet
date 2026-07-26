@@ -28,6 +28,18 @@ function getMeta(html, key) {
   return match ? decodeEntities(match[1].trim()) : "";
 }
 
+// Same as getMeta, but collects every matching tag instead of just the
+// first — some sites list a whole gallery as repeated og:image tags.
+function getAllMeta(html, key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re1 = new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]*content=["']([^"']*)["']`, "gi");
+  const re2 = new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]*(?:property|name)=["']${escaped}["']`, "gi");
+  const out = [];
+  for (const m of html.matchAll(re1)) out.push(decodeEntities(m[1].trim()));
+  for (const m of html.matchAll(re2)) out.push(decodeEntities(m[1].trim()));
+  return out;
+}
+
 function getTitleTag(html) {
   const match = html.match(/<title[^>]*>([^<]*)<\/title>/i);
   return match ? decodeEntities(match[1].trim()) : "";
@@ -98,6 +110,91 @@ function resolveUrl(maybeRelative, base) {
   }
 }
 
+// Product schema.org JSON-LD commonly lists a whole gallery under "image"
+// (a string, or an array of strings/ImageObjects) — the most reliable
+// source of multiple real product photos when a site provides it.
+function findImagesInJsonLd(html) {
+  const scripts = [...html.matchAll(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)];
+  const images = [];
+  for (const [, raw] of scripts) {
+    try {
+      const data = JSON.parse(raw.trim());
+      const nodes = Array.isArray(data) ? data : [data];
+      for (const node of nodes) collectImagesFromNode(node, images, 0);
+    } catch {
+      // Not valid JSON, or not the shape we expect — skip it.
+    }
+  }
+  return images;
+}
+
+function collectImagesFromNode(node, out, depth) {
+  if (!node || typeof node !== "object" || depth > 4) return;
+  if (node.image) {
+    const imgs = Array.isArray(node.image) ? node.image : [node.image];
+    for (const img of imgs) {
+      if (typeof img === "string") out.push(img);
+      else if (img && typeof img === "object" && img.url) out.push(img.url);
+    }
+  }
+  for (const value of Object.values(node)) {
+    if (!value || typeof value !== "object") continue;
+    if (Array.isArray(value)) value.forEach((v) => collectImagesFromNode(v, out, depth + 1));
+    else collectImagesFromNode(value, out, depth + 1);
+  }
+}
+
+// Last-resort fallback for pages with no structured gallery data: scan
+// every <img> tag, preferring lazy-load attributes (many galleries put a
+// low-res placeholder in src and the real photo in data-src/data-original)
+// and filtering out obvious icons/logos/tracking pixels by filename
+// keyword or a too-small declared width/height.
+const IMG_JUNK_PATTERN = /(logo|icon|sprite|pixel|spacer|blank|placeholder|avatar|badge|loading|1x1)/i;
+const MAX_IMG_TAGS_SCANNED = 400;
+
+function findImgTagCandidates(html) {
+  const candidates = [];
+  const imgTags = html.match(/<img\s[^>]*>/gi) || [];
+  for (const tag of imgTags.slice(0, MAX_IMG_TAGS_SCANNED)) {
+    const src =
+      tag.match(/\sdata-src=["']([^"']+)["']/i)?.[1] ||
+      tag.match(/\sdata-original=["']([^"']+)["']/i)?.[1] ||
+      tag.match(/\sdata-lazy-src=["']([^"']+)["']/i)?.[1] ||
+      tag.match(/\ssrc=["']([^"']+)["']/i)?.[1];
+    if (!src || src.startsWith("data:") || IMG_JUNK_PATTERN.test(src)) continue;
+    const width = Number(tag.match(/\swidth=["']?(\d+)/i)?.[1] || 0);
+    const height = Number(tag.match(/\sheight=["']?(\d+)/i)?.[1] || 0);
+    if ((width && width < 100) || (height && height < 100)) continue;
+    candidates.push(decodeEntities(src));
+  }
+  return candidates;
+}
+
+const MAX_IMAGES = 24;
+
+// Combines every source, most-reliable first, resolving to absolute URLs
+// and deduping along the way, capped at a sane count for a picker UI.
+function collectImages(html, finalUrl) {
+  const raw = [
+    ...findImagesInJsonLd(html),
+    ...getAllMeta(html, "og:image"),
+    ...getAllMeta(html, "twitter:image"),
+    getLinkHref(html, "image_src"),
+    getItempropImage(html),
+    ...findImgTagCandidates(html),
+  ].filter(Boolean);
+  const seen = new Set();
+  const resolved = [];
+  for (const src of raw) {
+    const abs = resolveUrl(src, finalUrl);
+    if (!abs || seen.has(abs)) continue;
+    seen.add(abs);
+    resolved.push(abs);
+    if (resolved.length >= MAX_IMAGES) break;
+  }
+  return resolved;
+}
+
 // Status codes sites commonly use to push back on non-browser requests —
 // worth a clearer message than a generic "couldn't fetch" for these, since
 // it's the site refusing rather than a network problem.
@@ -161,6 +258,7 @@ module.exports = async (req, res) => {
         error: messageForStatus(response.status),
         title: "",
         image: "",
+        images: [],
         description: "",
         price: "",
         currency: "",
@@ -176,10 +274,8 @@ module.exports = async (req, res) => {
     const finalUrl = response.url || parsed.toString();
     const title = getMeta(html, "og:title") || getTitleTag(html);
     const description = getMeta(html, "og:description") || getMeta(html, "description");
-    const image = resolveUrl(
-      getMeta(html, "og:image") || getMeta(html, "twitter:image") || getLinkHref(html, "image_src") || getItempropImage(html),
-      finalUrl
-    );
+    const images = collectImages(html, finalUrl);
+    const image = images[0] || "";
     const siteName = getMeta(html, "og:site_name") || parsed.hostname.replace(/^www\./, "");
 
     let price = getMeta(html, "product:price:amount") || getMeta(html, "og:price:amount");
@@ -200,6 +296,7 @@ module.exports = async (req, res) => {
     const result = {
       title,
       image,
+      images,
       description,
       price: price || "",
       currency: currency || "",
@@ -214,7 +311,7 @@ module.exports = async (req, res) => {
     res.status(200).json(result);
   } catch (err) {
     const message = err && err.name === "AbortError" ? "Timed out fetching that page." : "Couldn't fetch that link.";
-    res.status(200).json({ error: message, title: "", image: "", description: "", price: "", currency: "", siteName: parsed.hostname, sourceUrl: parsed.toString() });
+    res.status(200).json({ error: message, title: "", image: "", images: [], description: "", price: "", currency: "", siteName: parsed.hostname, sourceUrl: parsed.toString() });
   } finally {
     clearTimeout(timeout);
   }

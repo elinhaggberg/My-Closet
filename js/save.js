@@ -77,6 +77,40 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   }
   renderImagePreview();
 
+  // When a link fetch turns up more than one candidate image, this row
+  // lets you pick a different one than the auto-selected first guess —
+  // like choosing a Pin's cover image. Only ever populated from a fetch;
+  // uploading your own photo or clearing the image both drop it, since at
+  // that point the candidates no longer reflect what's actually chosen.
+  const choicesEl = el.querySelector("#editor-image-choices");
+  function renderImageChoices(images) {
+    if (!images || images.length <= 1) {
+      choicesEl.classList.add("hidden");
+      choicesEl.replaceChildren();
+      return;
+    }
+    choicesEl.classList.remove("hidden");
+    choicesEl.replaceChildren(
+      ...images.map((url) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "image-choice-thumb" + (url === draft.image ? " active" : "");
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "";
+        img.loading = "lazy";
+        btn.appendChild(img);
+        btn.addEventListener("click", () => {
+          draft.image = url;
+          renderImagePreview();
+          choicesEl.querySelectorAll(".image-choice-thumb").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+        });
+        return btn;
+      })
+    );
+  }
+
   el.querySelector("#photo-camera-btn").addEventListener("click", () => cameraInput.click());
   el.querySelector("#photo-library-btn").addEventListener("click", () => libraryInput.click());
 
@@ -86,6 +120,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
     try {
       draft.image = await readAndResizeImage(file);
       renderImagePreview();
+      renderImageChoices(null);
     } catch {
       // Unreadable file — leave the drop control as-is so they can retry.
     }
@@ -96,6 +131,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   el.querySelector("#photo-clear-btn").addEventListener("click", () => {
     draft.image = "";
     renderImagePreview();
+    renderImageChoices(null);
   });
 
   const urlInput = el.querySelector("#editor-url-input");
@@ -129,6 +165,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
         renderPriceToggle();
       }
       renderImagePreview();
+      renderImageChoices(data.images);
       if (data.error) {
         msgEl.textContent = `${data.error} You can still fill in the details yourself, or add your own photo below.`;
         msgEl.classList.add("error");
