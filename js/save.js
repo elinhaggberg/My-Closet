@@ -83,9 +83,18 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   // uploading your own photo or clearing the image both drop it, since at
   // that point the candidates no longer reflect what's actually chosen.
   const choicesEl = el.querySelector("#editor-image-choices");
+  // The trailing-edge fade only makes sense while there's actually more
+  // to scroll to — re-checked on scroll so it clears once you reach the end.
+  function updateChoicesFade() {
+    const hasMore = choicesEl.scrollWidth - choicesEl.clientWidth - choicesEl.scrollLeft > 2;
+    choicesEl.classList.toggle("has-overflow", hasMore);
+  }
+  choicesEl.addEventListener("scroll", updateChoicesFade);
+
   function renderImageChoices(images) {
     if (!images || images.length <= 1) {
       choicesEl.classList.add("hidden");
+      choicesEl.classList.remove("has-overflow");
       choicesEl.replaceChildren();
       return;
     }
@@ -109,6 +118,8 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
         return btn;
       })
     );
+    choicesEl.scrollLeft = 0;
+    updateChoicesFade();
   }
 
   el.querySelector("#photo-camera-btn").addEventListener("click", () => cameraInput.click());
