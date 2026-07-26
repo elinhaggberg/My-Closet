@@ -539,8 +539,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
    scrolled all the way, so it never fades a thumbnail that's fully visible
    with nothing left to reveal. */
 .image-choices.has-overflow {
-  -webkit-mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
-  mask-image: linear-gradient(to right, black calc(100% - 28px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 72px), transparent 100%);
+  mask-image: linear-gradient(to right, black calc(100% - 72px), transparent 100%);
 }
 .image-choice-thumb {
   flex-shrink: 0;
