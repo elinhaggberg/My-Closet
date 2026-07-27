@@ -48,6 +48,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   // Wired up front, before any of the widget setup below, so Save always
   // works even if one of those unrelated blocks throws — a single bad
   // element lookup shouldn't be able to silently disable the Save button.
+  const saveErrorEl = el.querySelector("#editor-save-error");
   el.querySelector("#editor-save-btn").addEventListener("click", () => {
     const finalCard = {
       ...draft,
@@ -59,7 +60,20 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
         ? [...new Set([...draft.boardIds, WISHLIST_BOARD_ID])]
         : draft.boardIds.filter((id) => id !== WISHLIST_BOARD_ID),
     };
-    saveCard(finalCard);
+    try {
+      saveCard(finalCard);
+    } catch (err) {
+      // Most likely a full localStorage (a device-imposed quota, hit
+      // sooner by photo uploads since they store the actual image data
+      // rather than just a link's small image URL) — surface it instead
+      // of leaving the sheet sitting there looking unresponsive.
+      saveErrorEl.textContent =
+        err?.name === "QuotaExceededError"
+          ? "Your closet is full on this device. Delete a few items with photos, or export a backup and remove some, then try again."
+          : "Couldn't save. Please try again.";
+      saveErrorEl.classList.remove("hidden");
+      return;
+    }
     sheet.close();
     refresh();
   });
