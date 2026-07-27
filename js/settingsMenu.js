@@ -21,7 +21,7 @@ export function openSettingsMenu(nav, refresh) {
     openCustomize();
   });
   el.querySelector("#export-all-btn").addEventListener("click", async () => {
-    const data = exportBackupData();
+    const data = await exportBackupData();
     const stamp = new Date().toISOString().slice(0, 10);
     await shareOrDownload(`my-closet-backup-${stamp}.json`, JSON.stringify(data, null, 2));
     markBackedUp();
@@ -109,7 +109,7 @@ function openImport(refresh) {
       return;
     }
     try {
-      const result = importData(parsed);
+      const result = await importData(parsed);
       const parts = [];
       if (result.cardCount) parts.push(`${result.cardCount} item${result.cardCount !== 1 ? "s" : ""}`);
       if (result.checklistCount) parts.push(`${result.checklistCount} list${result.checklistCount !== 1 ? "s" : ""}`);

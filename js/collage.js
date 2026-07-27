@@ -1,9 +1,10 @@
 // Composites a board's card images into one simple grid collage — a
 // lightweight "moodboard" export. Remote images are routed through
 // api/proxy-image.js so the canvas can actually be read back afterwards
-// (see that file for why); local photo cards are already data: URLs and
-// load directly. Individual image failures are tolerated — the collage
-// just uses whichever images loaded successfully.
+// (see that file for why); local photo cards resolve to a same-origin
+// blob: URL (see imageStore.js) and load directly. Individual image
+// failures are tolerated — the collage just uses whichever images loaded.
+import { resolveImageSrc } from "./imageStore.js";
 
 const MAX_IMAGES = 12;
 const GAP = 6;
@@ -19,7 +20,7 @@ function loadImage(src) {
 }
 
 function proxiedSrc(url) {
-  return url.startsWith("data:") ? url : `/api/proxy-image?url=${encodeURIComponent(url)}`;
+  return url.startsWith("data:") || url.startsWith("blob:") ? url : `/api/proxy-image?url=${encodeURIComponent(url)}`;
 }
 
 // Mirrors CSS object-fit: cover — scales the image to fill the destination
@@ -48,7 +49,8 @@ export async function buildCollageBlob(cards, { size = 1080 } = {}) {
     throw new Error("This board has no images to include yet.");
   }
 
-  const results = await Promise.allSettled(withImages.map((c) => loadImage(proxiedSrc(c.image))));
+  const resolvedSrcs = await Promise.all(withImages.map((c) => resolveImageSrc(c.image)));
+  const results = await Promise.allSettled(resolvedSrcs.filter(Boolean).map((src) => loadImage(proxiedSrc(src))));
   const images = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
   if (images.length === 0) {
     throw new Error("Couldn't load any of this board's images.");

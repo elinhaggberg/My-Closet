@@ -65,7 +65,7 @@ export function renderBoard(root, nav, boardId) {
     }
 
     sheet.el.querySelector("#export-board-btn").addEventListener("click", async () => {
-      const data = exportBoardData(board);
+      const data = await exportBoardData(board);
       await shareOrDownload(filenameFor(board.name), JSON.stringify(data, null, 2));
       sheet.close();
     });
@@ -106,8 +106,8 @@ export function renderBoard(root, nav, boardId) {
     const sheet = openSheet("tpl-confirm-delete");
     sheet.el.querySelector(".confirm-message").textContent = `Delete "${board.name}"? Saved items stay on your device but leave this board. This can't be undone.`;
     sheet.el.querySelector(".cancel-btn").addEventListener("click", () => sheet.close());
-    sheet.el.querySelector(".confirm-btn").addEventListener("click", () => {
-      deleteBoard(board.id);
+    sheet.el.querySelector(".confirm-btn").addEventListener("click", async () => {
+      await deleteBoard(board.id);
       sheet.close();
       nav.toBoards();
     });

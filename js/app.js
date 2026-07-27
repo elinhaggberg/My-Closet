@@ -5,7 +5,7 @@ import { renderMeasurements } from "./views/measurements.js";
 import { renderLists } from "./views/lists.js";
 import { renderChecklist } from "./views/checklist.js";
 import { applyTheme } from "./theme.js";
-import { createEmptyCard } from "./storage.js";
+import { createEmptyCard, migrateImagesToIndexedDB } from "./storage.js";
 import { openCardEditor } from "./save.js";
 import { checkWhatsNew } from "./whatsNew.js";
 import { checkOnboarding } from "./onboarding.js";
@@ -91,10 +91,17 @@ function handleIncomingShare() {
 }
 
 window.addEventListener("hashchange", route);
-route();
-handleIncomingShare();
-checkOnboarding();
-checkWhatsNew();
+
+// Anyone who saved photos before IndexedDB storage existed has them sitting
+// in localStorage as huge inline images — move those out before the first
+// render so the app isn't showing (and re-writing) oversized data any
+// longer than it has to. A no-op after the first run.
+migrateImagesToIndexedDB().finally(() => {
+  route();
+  handleIncomingShare();
+  checkOnboarding();
+  checkWhatsNew();
+});
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

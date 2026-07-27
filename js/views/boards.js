@@ -2,6 +2,7 @@ import { getBoards, getCardsForBoard, createBoard, WISHLIST_BOARD_ID } from "../
 import { renderTabbar } from "../tabbar.js";
 import { openSheet } from "../sheet.js";
 import { openSettingsMenu } from "../settingsMenu.js";
+import { resolveImageSrc } from "../imageStore.js";
 import { ICON_HEART, ICON_CHEVRON_RIGHT } from "../icons.js";
 
 export function renderBoards(root, nav) {
@@ -63,8 +64,10 @@ export function renderBoards(root, nav) {
       cover.replaceChildren(
         ...images.map((c) => {
           const img = document.createElement("img");
-          img.src = c.image;
           img.alt = "";
+          resolveImageSrc(c.image).then((src) => {
+            if (src) img.src = src;
+          });
           return img;
         })
       );
