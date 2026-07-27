@@ -45,6 +45,25 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   el.querySelector(".close-btn").addEventListener("click", () => sheet.close());
   el.querySelector("#editor-heading").textContent = isNew ? "Save" : "Edit";
 
+  // Wired up front, before any of the widget setup below, so Save always
+  // works even if one of those unrelated blocks throws — a single bad
+  // element lookup shouldn't be able to silently disable the Save button.
+  el.querySelector("#editor-save-btn").addEventListener("click", () => {
+    const finalCard = {
+      ...draft,
+      title: draft.title?.trim() || (draft.url ? hostnameFor(draft.url) : "Untitled"),
+      price: priceActive ? draft.price : "",
+      currency: priceActive ? draft.currency : "",
+      wishlist: wishlistActive ? { category: wishlistDraft.category, garment: wishlistDraft.garment } : null,
+      boardIds: wishlistActive
+        ? [...new Set([...draft.boardIds, WISHLIST_BOARD_ID])]
+        : draft.boardIds.filter((id) => id !== WISHLIST_BOARD_ID),
+    };
+    saveCard(finalCard);
+    sheet.close();
+    refresh();
+  });
+
   const titleInput = el.querySelector("#editor-title");
   const priceInput = el.querySelector("#editor-price");
   const currencyInput = el.querySelector("#editor-currency");
@@ -295,20 +314,4 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
     renderSizeBox(sizePreviewEl, wishlistDraft.category, wishlistDraft.garment);
   }
   renderGarmentFields();
-
-  el.querySelector("#editor-save-btn").addEventListener("click", () => {
-    const finalCard = {
-      ...draft,
-      title: draft.title?.trim() || (draft.url ? hostnameFor(draft.url) : "Untitled"),
-      price: priceActive ? draft.price : "",
-      currency: priceActive ? draft.currency : "",
-      wishlist: wishlistActive ? { category: wishlistDraft.category, garment: wishlistDraft.garment } : null,
-      boardIds: wishlistActive
-        ? [...new Set([...draft.boardIds, WISHLIST_BOARD_ID])]
-        : draft.boardIds.filter((id) => id !== WISHLIST_BOARD_ID),
-    };
-    saveCard(finalCard);
-    sheet.close();
-    refresh();
-  });
 }
