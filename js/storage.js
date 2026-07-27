@@ -508,6 +508,13 @@ export function shouldShowBackupBanner() {
 // is exactly what fills up the quota. Moves each into IndexedDB and rewrites
 // the card to reference it instead. Runs once (gated by a flag) and skips
 // any card it can't process rather than letting one bad image block startup.
+// Cheap, synchronous check for whether the migration below actually has
+// anything to do — lets the caller (migrationNotice.js) decide whether to
+// say anything, without needing to await the migration itself first.
+export function hasLegacyImages() {
+  return getCards().some((c) => typeof c.image === "string" && c.image.startsWith("data:"));
+}
+
 export async function migrateImagesToIndexedDB() {
   if (localStorage.getItem(IMAGES_MIGRATED_KEY) === "true") return;
   const cards = getCards();

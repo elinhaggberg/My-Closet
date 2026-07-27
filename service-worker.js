@@ -26,6 +26,7 @@ const APP_SHELL = [
   "./js/onboarding.js",
   "./js/whatsNew.js",
   "./js/version.js",
+  "./js/migrationNotice.js",
   "./js/views/home.js",
   "./js/views/boards.js",
   "./js/views/board.js",
