@@ -1,3 +1,5 @@
+import { IDB_PREFIX, putImage, getImage, deleteImage, dataUrlToBlob, blobToDataUrl } from "./imageStore.js";
+
 const CARDS_KEY = "mc_cards_v1";
 const BOARDS_KEY = "mc_boards_v1";
 const MEASUREMENTS_KEY = "mc_measurements_v1";
@@ -12,6 +14,7 @@ const LAST_BACKUP_KEY = "mc_last_backup_at_v1";
 const BACKUP_BANNER_DISMISSED_KEY = "mc_backup_banner_dismissed_at_v1";
 const FIRST_OPEN_KEY = "mc_first_open_at_v1";
 const ONBOARDING_SEEN_KEY = "mc_onboarding_seen_v1";
+const IMAGES_MIGRATED_KEY = "mc_images_migrated_v1";
 
 export const WISHLIST_BOARD_ID = "wishlist";
 
@@ -67,14 +70,14 @@ export function renameBoard(id, name) {
   return boards[idx];
 }
 
-export function deleteBoard(id) {
+export async function deleteBoard(id) {
   const board = getBoard(id);
   if (!board || board.isSystem) return;
   writeJSON(BOARDS_KEY, getBoards().filter((b) => b.id !== id));
   const cards = getCards();
   for (const card of cards) {
     if (card.boardIds.includes(id)) {
-      saveCard({ ...card, boardIds: card.boardIds.filter((b) => b !== id) });
+      await saveCard({ ...card, boardIds: card.boardIds.filter((b) => b !== id) });
     }
   }
 }
@@ -97,17 +100,36 @@ export function getCard(id) {
   return getCards().find((c) => c.id === id) || null;
 }
 
-export function saveCard(card) {
+export async function saveCard(card) {
   const cards = getCards();
   const idx = cards.findIndex((c) => c.id === card.id);
-  const withTimestamp = { ...card, updatedAt: Date.now() };
+  const previous = idx >= 0 ? cards[idx] : null;
+
+  // A fresh camera/library upload arrives as a Blob (see photo.js) — move it
+  // into IndexedDB and store just a reference, since the actual bytes are
+  // too big for localStorage's tiny quota. A link's image (or a re-saved
+  // idb: reference) is already a plain string and passes through untouched.
+  let image = card.image;
+  if (image instanceof Blob) {
+    image = IDB_PREFIX + card.id;
+    await putImage(card.id, card.image);
+  }
+  if (previous?.image?.startsWith(IDB_PREFIX) && previous.image !== image) {
+    await deleteImage(previous.image.slice(IDB_PREFIX.length)).catch(() => {});
+  }
+
+  const withTimestamp = { ...card, image, updatedAt: Date.now() };
   if (idx >= 0) cards[idx] = withTimestamp;
   else cards.push(withTimestamp);
   writeJSON(CARDS_KEY, cards);
   return withTimestamp;
 }
 
-export function deleteCard(id) {
+export async function deleteCard(id) {
+  const card = getCard(id);
+  if (card?.image?.startsWith(IDB_PREFIX)) {
+    await deleteImage(card.image.slice(IDB_PREFIX.length)).catch(() => {});
+  }
   writeJSON(CARDS_KEY, getCards().filter((c) => c.id !== id));
 }
 
@@ -235,12 +257,28 @@ function referencedBoards(cards) {
   return getBoards().filter((b) => ids.has(b.id));
 }
 
-export function exportBackupData() {
+// Exports inline each card's actual image bytes as a data: URI (resolving
+// any idb: reference back out of IndexedDB first) so an exported file is
+// fully self-contained and portable — it doesn't depend on this device's
+// IndexedDB to be useful on another device or after a reinstall.
+async function inlineImages(cards) {
+  return Promise.all(
+    cards.map(async (card) => {
+      if (card.image?.startsWith(IDB_PREFIX)) {
+        const blob = await getImage(card.image.slice(IDB_PREFIX.length));
+        if (blob) return { ...card, image: await blobToDataUrl(blob) };
+      }
+      return card;
+    })
+  );
+}
+
+export async function exportBackupData() {
   return {
     type: "backup",
     version: 1,
     exportedAt: new Date().toISOString(),
-    cards: getCards(),
+    cards: await inlineImages(getCards()),
     boards: getBoards().filter((b) => !b.isSystem),
     measurements: getMeasurements(),
     sizePrefs: getSizePrefs(),
@@ -252,23 +290,23 @@ export function exportBackupData() {
   };
 }
 
-export function exportCardData(card) {
+export async function exportCardData(card) {
   return {
     type: "card",
     version: 1,
     exportedAt: new Date().toISOString(),
-    cards: [card],
+    cards: await inlineImages([card]),
     boards: referencedBoards([card]).filter((b) => !b.isSystem),
   };
 }
 
-export function exportBoardData(board) {
+export async function exportBoardData(board) {
   const cards = getCardsForBoard(board.id);
   return {
     type: "board",
     version: 1,
     exportedAt: new Date().toISOString(),
-    cards,
+    cards: await inlineImages(cards),
     boards: board.isSystem ? [] : [board],
   };
 }
@@ -294,7 +332,7 @@ function importChecklists(data) {
 // anything, so a bad or repeated import can't destroy existing data —
 // boards merge by name (system Wishlist maps straight to the local
 // Wishlist), cards/measurements/checklists are always added as new.
-export function importData(data) {
+export async function importData(data) {
   if (!data || !["backup", "card", "board", "checklist"].includes(data.type)) {
     throw new Error("That doesn't look like a My Closet export file.");
   }
@@ -315,12 +353,32 @@ export function importData(data) {
     oldIdToLocalId.set(board.id, local.id);
   }
 
-  const newCards = data.cards.map((c) => ({
-    ...c,
-    id: uid(),
-    createdAt: Date.now(),
-    boardIds: (c.boardIds || []).map((id) => oldIdToLocalId.get(id)).filter(Boolean),
-  }));
+  // An imported card's image is a plain data: URI (inlined at export time,
+  // see inlineImages above) — move it straight into IndexedDB rather than
+  // leaving it sitting in localStorage, so importing a backup doesn't
+  // immediately blow past the same quota this whole store exists to avoid.
+  const newCards = await Promise.all(
+    data.cards.map(async (c) => {
+      const id = uid();
+      let image = c.image;
+      if (typeof image === "string" && image.startsWith("data:")) {
+        try {
+          await putImage(id, await dataUrlToBlob(image));
+          image = IDB_PREFIX + id;
+        } catch {
+          // Couldn't decode/store it — fall back to keeping the raw
+          // data: URI so the card still imports with its image intact.
+        }
+      }
+      return {
+        ...c,
+        id,
+        image,
+        createdAt: Date.now(),
+        boardIds: (c.boardIds || []).map((bid) => oldIdToLocalId.get(bid)).filter(Boolean),
+      };
+    })
+  );
   writeJSON(CARDS_KEY, [...getCards(), ...newCards]);
 
   const importedMeasurements = Array.isArray(data.measurements) ? data.measurements : [];
@@ -443,6 +501,38 @@ export function shouldShowBackupBanner() {
   if (dismissedAt && Date.now() - dismissedAt < BACKUP_SNOOZE_MS) return false;
 
   return true;
+}
+
+// One-time cleanup for anyone who saved photos before this store existed —
+// their images are sitting in localStorage as huge inline data: URIs, which
+// is exactly what fills up the quota. Moves each into IndexedDB and rewrites
+// the card to reference it instead. Runs once (gated by a flag) and skips
+// any card it can't process rather than letting one bad image block startup.
+// Cheap, synchronous check for whether the migration below actually has
+// anything to do — lets the caller (migrationNotice.js) decide whether to
+// say anything, without needing to await the migration itself first.
+export function hasLegacyImages() {
+  return getCards().some((c) => typeof c.image === "string" && c.image.startsWith("data:"));
+}
+
+export async function migrateImagesToIndexedDB() {
+  if (localStorage.getItem(IMAGES_MIGRATED_KEY) === "true") return;
+  const cards = getCards();
+  let changed = false;
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    if (typeof card.image === "string" && card.image.startsWith("data:")) {
+      try {
+        await putImage(card.id, await dataUrlToBlob(card.image));
+        cards[i] = { ...card, image: IDB_PREFIX + card.id };
+        changed = true;
+      } catch {
+        // Leave this one as-is and keep going with the rest.
+      }
+    }
+  }
+  if (changed) writeJSON(CARDS_KEY, cards);
+  localStorage.setItem(IMAGES_MIGRATED_KEY, "true");
 }
 
 export function getOnboardingSeen() {

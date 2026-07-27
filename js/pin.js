@@ -1,6 +1,7 @@
 import { formatPrice, hostnameFor } from "./util.js";
 import { computeSizeRecommendation } from "./sizing.js";
 import { getLatestMeasurement } from "./storage.js";
+import { resolveImageSrc } from "./imageStore.js";
 import { ICON_CHECK, ICON_WARNING, ICON_IMAGE } from "./icons.js";
 
 // Builds one Pinterest-style grid tile from the shared <template id="tpl-pin-card">.
@@ -12,9 +13,19 @@ export function createPinNode(card, onOpen) {
   const placeholder = node.querySelector(".pin-media-placeholder");
 
   if (card.image) {
-    img.src = card.image;
     img.alt = card.title || "";
-    img.classList.remove("hidden");
+    // Card images resolve async now (a local upload lives in IndexedDB) —
+    // render the node synchronously and let the image pop in once ready,
+    // falling back to the placeholder if it can't be resolved at all.
+    resolveImageSrc(card.image).then((src) => {
+      if (src) {
+        img.src = src;
+        img.classList.remove("hidden");
+      } else {
+        placeholder.innerHTML = ICON_IMAGE;
+        placeholder.classList.remove("hidden");
+      }
+    });
   } else {
     placeholder.innerHTML = ICON_IMAGE;
     placeholder.classList.remove("hidden");

@@ -5,6 +5,7 @@ import { formatPrice, hostnameFor } from "./util.js";
 import { renderSizeBox } from "./sizeBox.js";
 import { renderBoardChips } from "./boardChips.js";
 import { openCardEditor } from "./save.js";
+import { resolveImageSrc } from "./imageStore.js";
 
 export function openCardDetail(nav, cardRef, refresh) {
   const card = getCard(cardRef.id) || cardRef;
@@ -14,9 +15,13 @@ export function openCardDetail(nav, cardRef, refresh) {
 
   const img = el.querySelector("#detail-image");
   if (card.image) {
-    img.src = card.image;
     img.alt = card.title || "";
-    img.classList.remove("hidden");
+    resolveImageSrc(card.image).then((src) => {
+      if (src) {
+        img.src = src;
+        img.classList.remove("hidden");
+      }
+    });
   }
 
   el.querySelector("#detail-title").textContent = card.title || "Untitled";
@@ -44,7 +49,7 @@ export function openCardDetail(nav, cardRef, refresh) {
   const wishlistToggleLabel = wishlistToggle.querySelector(".wishlist-toggle-label");
   wishlistToggle.classList.toggle("active", !!card.wishlist);
   wishlistToggleLabel.textContent = card.wishlist ? "In your wishlist" : "Add to wishlist";
-  wishlistToggle.addEventListener("click", () => {
+  wishlistToggle.addEventListener("click", async () => {
     if (card.wishlist) {
       card.wishlist = null;
       card.boardIds = card.boardIds.filter((id) => id !== WISHLIST_BOARD_ID);
@@ -52,7 +57,7 @@ export function openCardDetail(nav, cardRef, refresh) {
       card.wishlist = makeWishlistFields();
       if (!card.boardIds.includes(WISHLIST_BOARD_ID)) card.boardIds.push(WISHLIST_BOARD_ID);
     }
-    saveCard(card);
+    await saveCard(card);
     refresh();
     sheet.close();
     openCardDetail(nav, card, refresh);
@@ -64,11 +69,11 @@ export function openCardDetail(nav, cardRef, refresh) {
 
   renderBoardChips(el.querySelector("#detail-board-chips"), {
     selectedIds: card.boardIds,
-    onToggle: (boardId) => {
+    onToggle: async (boardId) => {
       const idx = card.boardIds.indexOf(boardId);
       if (idx >= 0) card.boardIds.splice(idx, 1);
       else card.boardIds.push(boardId);
-      saveCard(card);
+      await saveCard(card);
       refresh();
     },
   });
@@ -79,7 +84,7 @@ export function openCardDetail(nav, cardRef, refresh) {
   });
 
   el.querySelector("#detail-share-btn").addEventListener("click", async () => {
-    const data = exportCardData(card);
+    const data = await exportCardData(card);
     await shareOrDownload(filenameFor(card.title), JSON.stringify(data, null, 2));
   });
 
@@ -87,8 +92,8 @@ export function openCardDetail(nav, cardRef, refresh) {
     const confirmSheet = openSheet("tpl-confirm-delete");
     confirmSheet.el.querySelector(".confirm-message").textContent = `Delete "${card.title || "this item"}"? This can't be undone.`;
     confirmSheet.el.querySelector(".cancel-btn").addEventListener("click", () => confirmSheet.close());
-    confirmSheet.el.querySelector(".confirm-btn").addEventListener("click", () => {
-      deleteCard(card.id);
+    confirmSheet.el.querySelector(".confirm-btn").addEventListener("click", async () => {
+      await deleteCard(card.id);
       confirmSheet.close();
       sheet.close();
       refresh();

@@ -3,6 +3,7 @@ import { openSheet } from "./sheet.js";
 import { renderBoardChips } from "./boardChips.js";
 import { renderSizeBox } from "./sizeBox.js";
 import { readAndResizeImage } from "./photo.js";
+import { resolveImageSrc } from "./imageStore.js";
 import { CATEGORIES, categoryFor, dimLabel } from "./sizing.js";
 import { hostnameFor } from "./util.js";
 
@@ -49,7 +50,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   // works even if one of those unrelated blocks throws — a single bad
   // element lookup shouldn't be able to silently disable the Save button.
   const saveErrorEl = el.querySelector("#editor-save-error");
-  el.querySelector("#editor-save-btn").addEventListener("click", () => {
+  el.querySelector("#editor-save-btn").addEventListener("click", async () => {
     const finalCard = {
       ...draft,
       title: draft.title?.trim() || (draft.url ? hostnameFor(draft.url) : "Untitled"),
@@ -61,7 +62,7 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
         : draft.boardIds.filter((id) => id !== WISHLIST_BOARD_ID),
     };
     try {
-      saveCard(finalCard);
+      await saveCard(finalCard);
     } catch (err) {
       // Most likely a full localStorage (a device-imposed quota, hit
       // sooner by photo uploads since they store the actual image data
@@ -100,9 +101,14 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
 
   function renderImagePreview() {
     if (draft.image) {
-      previewImg.src = draft.image;
       dropEl.classList.add("hidden");
       previewWrap.classList.remove("hidden");
+      // draft.image can be a remote URL, an "idb:" reference (editing an
+      // existing photo card), or a freshly-picked Blob (see handleFile) —
+      // resolveImageSrc handles all three, async since IndexedDB reads are.
+      resolveImageSrc(draft.image).then((src) => {
+        if (src) previewImg.src = src;
+      });
     } else {
       previewWrap.classList.add("hidden");
       dropEl.classList.remove("hidden");

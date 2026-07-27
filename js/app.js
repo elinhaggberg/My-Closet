@@ -5,10 +5,11 @@ import { renderMeasurements } from "./views/measurements.js";
 import { renderLists } from "./views/lists.js";
 import { renderChecklist } from "./views/checklist.js";
 import { applyTheme } from "./theme.js";
-import { createEmptyCard } from "./storage.js";
+import { createEmptyCard, migrateImagesToIndexedDB } from "./storage.js";
 import { openCardEditor } from "./save.js";
 import { checkWhatsNew } from "./whatsNew.js";
 import { checkOnboarding } from "./onboarding.js";
+import { checkMigrationNotice } from "./migrationNotice.js";
 
 applyTheme();
 
@@ -91,10 +92,27 @@ function handleIncomingShare() {
 }
 
 window.addEventListener("hashchange", route);
-route();
-handleIncomingShare();
-checkOnboarding();
-checkWhatsNew();
+
+// Anyone who saved photos before IndexedDB storage existed has them sitting
+// in localStorage as huge inline images — move those out before the first
+// render so the app isn't showing (and re-writing) oversized data any
+// longer than it has to. checkMigrationNotice reads the current (pre-
+// migration) data to decide whether to say anything, so it must run first;
+// the migration itself is a no-op after the first run either way, and
+// doesn't wait on the notice being read — it's just explaining what's
+// already happening in the background.
+const migrationNotice = checkMigrationNotice();
+migrateImagesToIndexedDB().finally(() => {
+  route();
+  handleIncomingShare();
+});
+
+// Held until the migration notice (if any) has actually been dismissed, so
+// a second one-time sheet can't stack on top of it before it's been read.
+migrationNotice.then(() => {
+  checkOnboarding();
+  checkWhatsNew();
+});
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

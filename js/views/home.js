@@ -29,7 +29,7 @@ export function renderHome(root, nav) {
   if (shouldShowBackupBanner()) {
     banner.classList.remove("hidden");
     banner.querySelector("#backup-now-btn").addEventListener("click", async () => {
-      const data = exportBackupData();
+      const data = await exportBackupData();
       const stamp = new Date().toISOString().slice(0, 10);
       await shareOrDownload(`my-closet-backup-${stamp}.json`, JSON.stringify(data, null, 2));
       markBackedUp();
