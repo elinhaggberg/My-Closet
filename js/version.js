@@ -10,7 +10,7 @@ export const CHANGELOG = [
     version: "2026.07.28.4",
     date: "July 28, 2026",
     changes: [
-      "Added a Restock button to a stock item's detail view — sets \"last bought\" to today in one tap, instead of opening the edit form to change the date.",
+      "Added a \"Log restock\" button to a stock item's detail view, shown only while a restock is actually due — one tap sets \"last bought\" to today and confirms with a checkmark, instead of opening the edit form to change the date.",
     ],
   },
   {

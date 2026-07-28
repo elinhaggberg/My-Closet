@@ -643,6 +643,11 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .stock-restock-box .stock-restock-next.overdue { color: var(--danger); font-weight: 700; }
 .stock-restock-box .stock-restock-next.soon { color: var(--warn); font-weight: 700; }
 
+.stock-restock-action { margin: 16px 0; }
+.stock-restock-btn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.stock-restock-btn .icon { width: 1.1rem; height: 1.1rem; }
+.stock-restock-btn.logged { background: var(--good); color: #fff; opacity: 1; }
+
 /* Photo picker */
 .photo-drop {
   display: flex;
