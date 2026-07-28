@@ -3,9 +3,20 @@
 // last saw and shows the "What's new" sheet for anything newer. Keep the
 // version string in YYYY.MM.DD form (zero-padded) so plain string
 // comparison sorts the same as chronological order.
-export const APP_VERSION = "2026.07.19";
+export const APP_VERSION = "2026.07.28";
 
 export const CHANGELOG = [
+  {
+    version: "2026.07.28",
+    date: "July 28, 2026",
+    changes: [
+      "New: Stock items, in the menu — a table for the everyday things you buy on repeat (underwear, contact lenses, razors...), with a reminder when it's time to restock and one-tap calendar export.",
+      "Saved photos now use a lot more storage space on your device, so 'closet is full' errors should be a thing of the past.",
+      "Fixed the Home feed sometimes stacking almost everything into one column instead of balancing both.",
+      "A card with no title now shows just the image, full-bleed, instead of the word \"Untitled\".",
+      "Prices on cards are smaller and more muted, so they don't compete with the image.",
+    ],
+  },
   {
     version: "2026.07.19",
     date: "July 19, 2026",

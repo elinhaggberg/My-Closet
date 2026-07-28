@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-closet-v4";
+const CACHE_NAME = "my-closet-v5";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,11 @@ const APP_SHELL = [
   "./js/storage.js",
   "./js/imageStore.js",
   "./js/sizing.js",
+  "./js/stock.js",
+  "./js/stockIcons.js",
+  "./js/stockItemEditor.js",
+  "./js/stockItemDetail.js",
+  "./js/ics.js",
   "./js/theme.js",
   "./js/util.js",
   "./js/sheet.js",
@@ -33,6 +38,7 @@ const APP_SHELL = [
   "./js/views/measurements.js",
   "./js/views/lists.js",
   "./js/views/checklist.js",
+  "./js/views/stockItems.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
   "./icons/icon-maskable-512.png",

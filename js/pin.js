@@ -14,14 +14,17 @@ export function createPinNode(card, onOpen) {
 
   if (card.image) {
     img.alt = card.title || "";
-    // Card images resolve async now (a local upload lives in IndexedDB) —
-    // render the node synchronously and let the image pop in once ready,
-    // falling back to the placeholder if it can't be resolved at all.
+    // Shown immediately with its aspect-ratio reserved (see style.css) even
+    // though the actual src resolves async (a local upload lives in
+    // IndexedDB) — otherwise masonry.js's column-balancing measurement runs
+    // before any image has rendered and badly misjudges which column is
+    // shortest. Falls back to the placeholder only if resolution fails.
+    img.classList.remove("hidden");
     resolveImageSrc(card.image).then((src) => {
       if (src) {
         img.src = src;
-        img.classList.remove("hidden");
       } else {
+        img.classList.add("hidden");
         placeholder.innerHTML = ICON_IMAGE;
         placeholder.classList.remove("hidden");
       }
@@ -31,7 +34,10 @@ export function createPinNode(card, onOpen) {
     placeholder.classList.remove("hidden");
   }
 
-  node.querySelector(".pin-title").textContent = card.title || "Untitled";
+  // No title means this was saved as purely inspirational — no "Untitled"
+  // filler text, just the image filling the whole card (see .pin-untitled).
+  article.classList.toggle("pin-untitled", !card.title);
+  node.querySelector(".pin-title").textContent = card.title || "";
 
   const priceEl = node.querySelector(".pin-price");
   if (card.price) {

@@ -53,7 +53,12 @@ export function openCardEditor(nav, { card, isNew, refresh, presetBoardId, autoF
   el.querySelector("#editor-save-btn").addEventListener("click", async () => {
     const finalCard = {
       ...draft,
-      title: draft.title?.trim() || (draft.url ? hostnameFor(draft.url) : "Untitled"),
+      // No title and no link means this was saved as purely inspirational —
+      // stays truly blank rather than being forced into a placeholder word,
+      // so the grid tile can treat it as "just show the image" (see pin.js).
+      // A link with no title still falls back to its hostname, since that's
+      // a real identifying label rather than filler text.
+      title: draft.title?.trim() || (draft.url ? hostnameFor(draft.url) : ""),
       price: priceActive ? draft.price : "",
       currency: priceActive ? draft.currency : "",
       wishlist: wishlistActive ? { category: wishlistDraft.category, garment: wishlistDraft.garment } : null,

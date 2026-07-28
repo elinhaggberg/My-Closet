@@ -257,6 +257,11 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 }
 .pin-media {
   width: 100%;
+  /* Reserved immediately, before the actual image has loaded (it resolves
+     async — see pin.js) — without this, the masonry column-balancing pass
+     in masonry.js measures every card's height before any image has
+     rendered, so it can badly misjudge which column is actually shortest. */
+  aspect-ratio: 4 / 5;
   display: block;
   background: var(--surface-2);
   object-fit: cover;
@@ -271,6 +276,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   color: var(--text-dim);
   font-size: 1.6rem;
 }
+/* An untitled card is treated as purely inspirational — no text overlay,
+   just the image filling the whole tile. */
+.pin.pin-untitled .pin-body { display: none; }
 .pin-body { padding: 10px 12px 12px; }
 .pin-title {
   font-size: 0.92rem;
@@ -284,9 +292,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 }
 .pin-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pin-price {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-dim);
 }
 .pin-source {
   font-size: 0.75rem;
@@ -553,6 +561,86 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 }
 .image-choice-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .image-choice-thumb.active { border-color: var(--accent); }
+
+/* Icon picker (Stock item editor) */
+.icon-picker-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+.icon-picker-btn {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: 2px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  flex-shrink: 0;
+}
+.icon-picker-btn.active { border-color: var(--accent); color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.icon-picker-btn .icon { width: 1.3rem; height: 1.3rem; }
+
+/* Stock items list */
+.stock-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  cursor: pointer;
+}
+.stock-row:last-child { border-bottom: none; }
+.stock-row-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stock-row-icon .icon { width: 1.1rem; height: 1.1rem; }
+.stock-row-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.stock-row-name { font-weight: 600; font-size: 0.92rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stock-row-meta { font-size: 0.78rem; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stock-row-due {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.stock-row-due.overdue { color: var(--danger); background: color-mix(in srgb, var(--danger) 16%, transparent); }
+.stock-row-due.soon { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.stock-row-due.ok { color: var(--good); background: color-mix(in srgb, var(--good) 16%, transparent); }
+.stock-row-edit-btn, .stock-row-delete-btn { flex-shrink: 0; width: 32px; height: 32px; }
+.stock-row-edit-btn .icon, .stock-row-delete-btn .icon { width: 0.9rem; height: 0.9rem; }
+
+.stock-detail-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.stock-detail-icon .icon { width: 1.6rem; height: 1.6rem; }
+.stock-restock-box {
+  background: var(--surface-2);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+.stock-restock-box .stock-restock-next.overdue { color: var(--danger); font-weight: 700; }
+.stock-restock-box .stock-restock-next.soon { color: var(--warn); font-weight: 700; }
 
 /* Photo picker */
 .photo-drop {

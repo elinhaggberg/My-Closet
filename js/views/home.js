@@ -5,6 +5,9 @@ import {
   markBackedUp,
   dismissBackupBanner,
   shouldShowBackupBanner,
+  getStockItems,
+  dismissRestockBanner,
+  shouldShowRestockBanner,
 } from "../storage.js";
 import { createPinNode } from "../pin.js";
 import { renderTabbar } from "../tabbar.js";
@@ -13,6 +16,7 @@ import { openSaveChoice } from "../save.js";
 import { openCardDetail } from "../cardDetail.js";
 import { openSettingsMenu } from "../settingsMenu.js";
 import { shareOrDownload } from "../share.js";
+import { isDue } from "../stock.js";
 
 export function renderHome(root, nav) {
   const tpl = document.getElementById("tpl-home");
@@ -38,6 +42,24 @@ export function renderHome(root, nav) {
     banner.querySelector("#backup-dismiss-btn").addEventListener("click", () => {
       dismissBackupBanner();
       banner.classList.add("hidden");
+    });
+  }
+
+  const restockBanner = document.getElementById("restock-banner");
+  const dueItems = getStockItems().filter((i) => i.remindEnabled && isDue(i));
+  if (shouldShowRestockBanner(dueItems.length)) {
+    restockBanner.classList.remove("hidden");
+    restockBanner.querySelector("#restock-banner-text").textContent =
+      dueItems.length === 1
+        ? `"${dueItems[0].name || "An item"}" is due for a restock.`
+        : `${dueItems.length} stock items are due for a restock.`;
+    restockBanner.querySelector("#restock-view-btn").addEventListener("click", () => {
+      restockBanner.classList.add("hidden");
+      nav.toStock();
+    });
+    restockBanner.querySelector("#restock-dismiss-btn").addEventListener("click", () => {
+      dismissRestockBanner();
+      restockBanner.classList.add("hidden");
     });
   }
 
