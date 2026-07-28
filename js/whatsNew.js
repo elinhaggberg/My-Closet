@@ -17,7 +17,12 @@ export function checkWhatsNew() {
   // A known prior version shows everything shipped since then; an unknown
   // one (someone updating from before this system existed) falls back to
   // just the latest entry, since there's no earlier history to compare to.
-  const entries = lastSeen ? CHANGELOG.filter((entry) => entry.version > lastSeen) : CHANGELOG.slice(-1);
+  // Found by actual version comparison rather than array position (e.g.
+  // CHANGELOG[0]) so this can't silently break depending on which end of
+  // the list new releases get added to.
+  const entries = lastSeen
+    ? CHANGELOG.filter((entry) => entry.version > lastSeen)
+    : [CHANGELOG.reduce((latest, entry) => (entry.version > latest.version ? entry : latest))];
   if (entries.length === 0) return;
 
   openWhatsNewSheet(entries);
