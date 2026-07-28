@@ -6,6 +6,7 @@ import { nextRestockDate, isDue, daysUntil, unitLabel } from "./stock.js";
 import { buildIcsEvent, googleCalendarLink } from "./ics.js";
 import { shareOrDownloadBlob, filenameFor } from "./share.js";
 import { formatDate } from "./util.js";
+import { openRemindConfirmSheet } from "./remindConfirm.js";
 
 export function openStockItemDetail(nav, itemRef, refresh) {
   const item = getStockItem(itemRef.id) || itemRef;
@@ -62,6 +63,7 @@ export function openStockItemDetail(nav, itemRef, refresh) {
     remindToggle.classList.toggle("active", item.remindEnabled);
     saveStockItem(item);
     refresh();
+    if (item.remindEnabled) openRemindConfirmSheet(item);
   });
 
   const icsBtn = el.querySelector("#stock-detail-ics-btn");

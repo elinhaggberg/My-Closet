@@ -291,7 +291,7 @@ export function createEmptyStockItem() {
     replaceEveryValue: 3,
     replaceEveryUnit: "months",
     lastBought: "",
-    remindEnabled: true,
+    remindEnabled: false,
   };
 }
 
