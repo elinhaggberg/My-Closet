@@ -7,6 +7,7 @@ import { buildIcsEvent, googleCalendarLink } from "./ics.js";
 import { shareOrDownloadBlob, filenameFor } from "./share.js";
 import { formatDate } from "./util.js";
 import { openRemindConfirmSheet } from "./remindConfirm.js";
+import { ICON_CHECK } from "./icons.js";
 
 export function openStockItemDetail(nav, itemRef, refresh) {
   const item = getStockItem(itemRef.id) || itemRef;
@@ -68,24 +69,50 @@ export function openStockItemDetail(nav, itemRef, refresh) {
 
   const icsBtn = el.querySelector("#stock-detail-ics-btn");
   const gcalBtn = el.querySelector("#stock-detail-gcal-btn");
-  const next = nextRestockDate(item);
-  if (!next) {
-    icsBtn.disabled = true;
-    gcalBtn.disabled = true;
-  } else {
+  // Uses .onclick (overwrites) rather than addEventListener, since this
+  // gets re-run after restocking changes the date the buttons need to use —
+  // addEventListener would otherwise stack a stale extra handler each time.
+  renderCalendarButtons();
+  function renderCalendarButtons() {
+    const next = nextRestockDate(item);
+    icsBtn.disabled = !next;
+    gcalBtn.disabled = !next;
+    if (!next) return;
     const eventDetails = {
       title: `Restock: ${item.name || "item"}`,
       date: next,
       description: item.spec ? `${item.type || ""} — ${item.spec}`.trim() : item.type || "",
     };
-    icsBtn.addEventListener("click", async () => {
+    icsBtn.onclick = async () => {
       const blob = new Blob([buildIcsEvent(eventDetails)], { type: "text/calendar" });
       await shareOrDownloadBlob(filenameFor(item.name, "ics"), blob);
-    });
-    gcalBtn.addEventListener("click", () => {
+    };
+    gcalBtn.onclick = () => {
       window.open(googleCalendarLink(eventDetails), "_blank", "noopener");
-    });
+    };
   }
+
+  // Only surfaced while a restock is actually due — once logged, the button
+  // itself flips to a "logged" confirmation rather than disappearing
+  // mid-view (it'll correctly stay hidden on the *next* visit, once this
+  // item genuinely isn't due anymore).
+  const restockAction = el.querySelector("#stock-detail-restock-action");
+  const restockBtn = el.querySelector("#stock-detail-restock-btn");
+  const restockBtnIcon = el.querySelector("#stock-detail-restock-btn-icon");
+  const restockBtnText = el.querySelector("#stock-detail-restock-btn-text");
+  restockAction.classList.toggle("hidden", !isDue(item));
+  restockBtn.addEventListener("click", () => {
+    item.lastBought = new Date().toISOString().slice(0, 10);
+    saveStockItem(item);
+    renderRestockBox();
+    renderCalendarButtons();
+    refresh();
+
+    restockBtn.disabled = true;
+    restockBtn.classList.add("logged");
+    restockBtnIcon.innerHTML = ICON_CHECK;
+    restockBtnText.textContent = `Restock logged — ${formatDate(item.lastBought)}`;
+  });
 
   el.querySelector("#stock-detail-edit-btn").addEventListener("click", () => {
     sheet.close();
