@@ -290,7 +290,7 @@ export function createEmptyStockItem() {
     spec: "",
     replaceEveryValue: 3,
     replaceEveryUnit: "months",
-    lastBought: "",
+    lastBought: new Date().toISOString().slice(0, 10),
     remindEnabled: false,
   };
 }
