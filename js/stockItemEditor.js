@@ -2,6 +2,7 @@ import { createEmptyStockItem, saveStockItem } from "./storage.js";
 import { openSheet } from "./sheet.js";
 import { STOCK_ICONS } from "./stockIcons.js";
 import { REPLACE_UNITS } from "./stock.js";
+import { openRemindConfirmSheet } from "./remindConfirm.js";
 
 export function openStockItemEditor(nav, { item, isNew, refresh }) {
   const draft = { ...(item || createEmptyStockItem()) };
@@ -99,5 +100,6 @@ export function openStockItemEditor(nav, { item, isNew, refresh }) {
   remindToggle.addEventListener("click", () => {
     draft.remindEnabled = !draft.remindEnabled;
     renderRemindToggle();
+    if (draft.remindEnabled) openRemindConfirmSheet(draft);
   });
 }
