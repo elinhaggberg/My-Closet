@@ -257,6 +257,11 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 }
 .pin-media {
   width: 100%;
+  /* Reserved immediately, before the actual image has loaded (it resolves
+     async — see pin.js) — without this, the masonry column-balancing pass
+     in masonry.js measures every card's height before any image has
+     rendered, so it can badly misjudge which column is actually shortest. */
+  aspect-ratio: 4 / 5;
   display: block;
   background: var(--surface-2);
   object-fit: cover;
@@ -271,6 +276,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   color: var(--text-dim);
   font-size: 1.6rem;
 }
+/* An untitled card is treated as purely inspirational — no text overlay,
+   just the image filling the whole tile. */
+.pin.pin-untitled .pin-body { display: none; }
 .pin-body { padding: 10px 12px 12px; }
 .pin-title {
   font-size: 0.92rem;
@@ -284,9 +292,9 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 }
 .pin-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pin-price {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--text-dim);
 }
 .pin-source {
   font-size: 0.75rem;
