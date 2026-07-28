@@ -3,9 +3,16 @@
 // last saw and shows the "What's new" sheet for anything newer. Keep the
 // version string in YYYY.MM.DD form (zero-padded) so plain string
 // comparison sorts the same as chronological order.
-export const APP_VERSION = "2026.07.28.3";
+export const APP_VERSION = "2026.07.28.4";
 
 export const CHANGELOG = [
+  {
+    version: "2026.07.28.4",
+    date: "July 28, 2026",
+    changes: [
+      "Added a Restock button to a stock item's detail view — sets \"last bought\" to today in one tap, instead of opening the edit form to change the date.",
+    ],
+  },
   {
     version: "2026.07.28.3",
     date: "July 28, 2026",

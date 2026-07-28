@@ -68,24 +68,36 @@ export function openStockItemDetail(nav, itemRef, refresh) {
 
   const icsBtn = el.querySelector("#stock-detail-ics-btn");
   const gcalBtn = el.querySelector("#stock-detail-gcal-btn");
-  const next = nextRestockDate(item);
-  if (!next) {
-    icsBtn.disabled = true;
-    gcalBtn.disabled = true;
-  } else {
+  // Uses .onclick (overwrites) rather than addEventListener, since this
+  // gets re-run after restocking changes the date the buttons need to use —
+  // addEventListener would otherwise stack a stale extra handler each time.
+  renderCalendarButtons();
+  function renderCalendarButtons() {
+    const next = nextRestockDate(item);
+    icsBtn.disabled = !next;
+    gcalBtn.disabled = !next;
+    if (!next) return;
     const eventDetails = {
       title: `Restock: ${item.name || "item"}`,
       date: next,
       description: item.spec ? `${item.type || ""} — ${item.spec}`.trim() : item.type || "",
     };
-    icsBtn.addEventListener("click", async () => {
+    icsBtn.onclick = async () => {
       const blob = new Blob([buildIcsEvent(eventDetails)], { type: "text/calendar" });
       await shareOrDownloadBlob(filenameFor(item.name, "ics"), blob);
-    });
-    gcalBtn.addEventListener("click", () => {
+    };
+    gcalBtn.onclick = () => {
       window.open(googleCalendarLink(eventDetails), "_blank", "noopener");
-    });
+    };
   }
+
+  el.querySelector("#stock-detail-restock-btn").addEventListener("click", () => {
+    item.lastBought = new Date().toISOString().slice(0, 10);
+    saveStockItem(item);
+    renderRestockBox();
+    renderCalendarButtons();
+    refresh();
+  });
 
   el.querySelector("#stock-detail-edit-btn").addEventListener("click", () => {
     sheet.close();
