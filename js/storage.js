@@ -15,6 +15,9 @@ const BACKUP_BANNER_DISMISSED_KEY = "mc_backup_banner_dismissed_at_v1";
 const FIRST_OPEN_KEY = "mc_first_open_at_v1";
 const ONBOARDING_SEEN_KEY = "mc_onboarding_seen_v1";
 const IMAGES_MIGRATED_KEY = "mc_images_migrated_v1";
+const STOCK_ITEMS_KEY = "mc_stock_items_v1";
+const STOCK_SORT_KEY = "mc_stock_sort_v1";
+const RESTOCK_BANNER_DISMISSED_KEY = "mc_restock_banner_dismissed_at_v1";
 
 export const WISHLIST_BOARD_ID = "wishlist";
 
@@ -249,6 +252,73 @@ export function exportChecklistData(list) {
   };
 }
 
+// ---- Stock items ----
+// A flat table of everyday consumables (underwear, contact lenses, razor
+// blades...) you buy on a cycle rather than saving once — deliberately
+// separate from cards/boards, which are about things you're keeping.
+
+export function getStockItems() {
+  return readJSON(STOCK_ITEMS_KEY, []);
+}
+
+export function getStockItem(id) {
+  return getStockItems().find((i) => i.id === id) || null;
+}
+
+export function saveStockItem(item) {
+  const items = getStockItems();
+  const idx = items.findIndex((i) => i.id === item.id);
+  const withTimestamp = { ...item, updatedAt: Date.now() };
+  if (idx >= 0) items[idx] = withTimestamp;
+  else items.push(withTimestamp);
+  writeJSON(STOCK_ITEMS_KEY, items);
+  return withTimestamp;
+}
+
+export function deleteStockItem(id) {
+  writeJSON(STOCK_ITEMS_KEY, getStockItems().filter((i) => i.id !== id));
+}
+
+export function createEmptyStockItem() {
+  return {
+    id: uid(),
+    createdAt: Date.now(),
+    icon: "box",
+    type: "",
+    name: "",
+    link: "",
+    spec: "",
+    replaceEveryValue: 3,
+    replaceEveryUnit: "months",
+    lastBought: "",
+    remindEnabled: true,
+  };
+}
+
+export function getStockSort() {
+  return localStorage.getItem(STOCK_SORT_KEY) || "restock";
+}
+
+export function setStockSort(mode) {
+  localStorage.setItem(STOCK_SORT_KEY, mode);
+}
+
+const RESTOCK_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000; // re-ask 3 days after "Later"
+
+export function dismissRestockBanner() {
+  localStorage.setItem(RESTOCK_BANNER_DISMISSED_KEY, String(Date.now()));
+}
+
+// dueCount is passed in rather than computed here since the caller already
+// needs the actual due items (for the banner's text), and the date math
+// for "is this due" lives in stock.js, not storage.js.
+export function shouldShowRestockBanner(dueCount) {
+  if (!dueCount) return false;
+  const dismissedAt = Number(localStorage.getItem(RESTOCK_BANNER_DISMISSED_KEY));
+  if (dismissedAt && Date.now() - dismissedAt < RESTOCK_SNOOZE_MS) return false;
+  return true;
+}
+
 // ---- Export / import ----
 
 function referencedBoards(cards) {
@@ -284,6 +354,7 @@ export async function exportBackupData() {
     sizePrefs: getSizePrefs(),
     measurementNotes: getMeasurementNotes(),
     checklists: getChecklists(),
+    stockItems: getStockItems(),
     theme: getThemePref(),
     unit: getUnit(),
     homeTitle: getHomeTitle(),
@@ -407,6 +478,12 @@ export async function importData(data) {
 
   const checklistCount = importChecklists(data);
 
+  const importedStockItems = Array.isArray(data.stockItems) ? data.stockItems : [];
+  if (importedStockItems.length) {
+    const newStockItems = importedStockItems.map((i) => ({ ...i, id: uid(), createdAt: Date.now() }));
+    writeJSON(STOCK_ITEMS_KEY, [...getStockItems(), ...newStockItems]);
+  }
+
   // Theme, unit, and home title are single current-state settings, not
   // lists, so a full backup restore applies them directly rather than
   // merging -- that's what "restore my backup" means for a device's
@@ -425,6 +502,7 @@ export async function importData(data) {
     boardCount: importedBoards.length,
     measurementCount: importedMeasurements.length,
     checklistCount,
+    stockItemCount: importedStockItems.length,
     preferencesApplied,
   };
 }

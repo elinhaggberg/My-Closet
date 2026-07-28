@@ -4,6 +4,7 @@ import { renderBoard } from "./views/board.js";
 import { renderMeasurements } from "./views/measurements.js";
 import { renderLists } from "./views/lists.js";
 import { renderChecklist } from "./views/checklist.js";
+import { renderStockItems } from "./views/stockItems.js";
 import { applyTheme } from "./theme.js";
 import { createEmptyCard, migrateImagesToIndexedDB } from "./storage.js";
 import { openCardEditor } from "./save.js";
@@ -33,6 +34,9 @@ const nav = {
   },
   toList: (id) => {
     location.hash = `#/list/${encodeURIComponent(id)}`;
+  },
+  toStock: () => {
+    location.hash = "#/stock";
   },
 };
 
@@ -65,6 +69,9 @@ function route() {
         return;
       }
       renderChecklist(root, nav, param);
+      break;
+    case "stock":
+      renderStockItems(root, nav);
       break;
     default:
       renderHome(root, nav);

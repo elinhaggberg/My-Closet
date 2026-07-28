@@ -12,6 +12,10 @@ export function openSettingsMenu(nav, refresh) {
     sheet.close();
     nav.toMeasurements();
   });
+  el.querySelector("#stock-items-btn").addEventListener("click", () => {
+    sheet.close();
+    nav.toStock();
+  });
   el.querySelector("#instructions-btn").addEventListener("click", () => {
     sheet.close();
     openInstructions();
@@ -113,6 +117,7 @@ function openImport(refresh) {
       const parts = [];
       if (result.cardCount) parts.push(`${result.cardCount} item${result.cardCount !== 1 ? "s" : ""}`);
       if (result.checklistCount) parts.push(`${result.checklistCount} list${result.checklistCount !== 1 ? "s" : ""}`);
+      if (result.stockItemCount) parts.push(`${result.stockItemCount} stock item${result.stockItemCount !== 1 ? "s" : ""}`);
       let text = parts.length ? `Imported ${parts.join(" and ")}.` : "Import complete.";
       if (result.preferencesApplied) text += " Restored your theme/settings too.";
       messageEl.textContent = text;

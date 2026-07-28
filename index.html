@@ -38,6 +38,13 @@
         <button type="button" class="text-btn" id="backup-dismiss-btn">Later</button>
       </div>
     </div>
+    <div id="restock-banner" class="banner hidden">
+      <p id="restock-banner-text"></p>
+      <div class="banner-actions">
+        <button type="button" class="text-btn primary" id="restock-view-btn">View stock items</button>
+        <button type="button" class="text-btn" id="restock-dismiss-btn">Later</button>
+      </div>
+    </div>
     <div class="page-body">
       <p class="card-detail-section-label" style="padding:0 16px 8px;">Recently saved</p>
       <div class="card-grid" id="home-grid"></div>
@@ -197,6 +204,116 @@
         <svg class="icon" viewBox="0 0 448 512" aria-hidden="true" focusable="false"><path d="M136.7 5.9C141.1-7.2 153.3-16 167.1-16l113.9 0c13.8 0 26 8.8 30.4 21.9L320 32 416 32c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 96C14.3 96 0 81.7 0 64S14.3 32 32 32l96 0 8.7-26.1zM32 144l384 0 0 304c0 35.3-28.7 64-64 64L96 512c-35.3 0-64-28.7-64-64l0-304zm88 64c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24z"/></svg>
         <span>Delete list</span>
       </button>
+    </div>
+  </template>
+
+  <!-- ===== Stock items ===== -->
+  <template id="tpl-stock-items">
+    <header class="topbar">
+      <button class="icon-btn back-btn" aria-label="Back"><svg class="icon" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.3 288 480 288c17.7 0 32-14.3 32-32s-14.3-32-32-32l-370.7 0 105.4-105.4c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></svg></button>
+      <h1>Stock items</h1>
+      <button class="icon-btn" id="stock-add-btn" aria-label="Add item" title="Add item"><svg class="icon" viewBox="0 0 448 512" aria-hidden="true" focusable="false"><path d="M256 64c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 160-160 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l160 0 0 160c0 17.7 14.3 32 32 32s32-14.3 32-32l0-160 160 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-160 0 0-160z"/></svg></button>
+    </header>
+    <div class="page-body">
+      <div class="segmented" id="stock-sort-segmented" style="margin:12px 16px 4px;">
+        <button type="button" class="segmented-option" data-sort="restock">Restock due</button>
+        <button type="button" class="segmented-option" data-sort="name">Name</button>
+      </div>
+      <div id="stock-list"></div>
+    </div>
+  </template>
+
+  <template id="tpl-stock-row">
+    <div class="stock-row" tabindex="0" role="button">
+      <span class="stock-row-icon"></span>
+      <span class="stock-row-body">
+        <span class="stock-row-name"></span>
+        <span class="stock-row-meta"></span>
+      </span>
+      <span class="stock-row-due hidden"></span>
+      <button type="button" class="icon-btn stock-row-edit-btn" aria-label="Edit" title="Edit"><svg class="icon" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="M352.9 21.2L308 66.1 445.9 204 490.8 159.1C504.4 145.6 512 127.2 512 108s-7.6-37.6-21.2-51.1L455.1 21.2C441.6 7.6 423.2 0 404 0s-37.6 7.6-51.1 21.2zM274.1 100L58.9 315.1c-10.7 10.7-18.5 24.1-22.6 38.7L.9 481.6c-2.3 8.3 0 17.3 6.2 23.4s15.1 8.5 23.4 6.2l127.8-35.5c14.6-4.1 27.9-11.8 38.7-22.6L412 237.9 274.1 100z"/></svg></button>
+      <button type="button" class="icon-btn stock-row-delete-btn" aria-label="Delete" title="Delete"><svg class="icon" viewBox="0 0 448 512" aria-hidden="true" focusable="false"><path d="M136.7 5.9C141.1-7.2 153.3-16 167.1-16l113.9 0c13.8 0 26 8.8 30.4 21.9L320 32 416 32c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 96C14.3 96 0 81.7 0 64S14.3 32 32 32l96 0 8.7-26.1zM32 144l384 0 0 304c0 35.3-28.7 64-64 64L96 512c-35.3 0-64-28.7-64-64l0-304zm88 64c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24z"/></svg></button>
+    </div>
+  </template>
+
+  <template id="tpl-stock-item-editor">
+    <div class="sheet">
+      <header class="sheet-header">
+        <h2 id="stock-editor-heading">Add stock item</h2>
+        <button class="icon-btn close-btn" aria-label="Close"><svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg></button>
+      </header>
+      <label class="field"><span>Icon</span></label>
+      <div id="stock-editor-icon-picker" class="icon-picker-grid"></div>
+      <label class="field">
+        <span>Type</span>
+        <input type="text" id="stock-editor-type" maxlength="60" placeholder="e.g. Underwear" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Name</span>
+        <input type="text" id="stock-editor-name" maxlength="120" placeholder="e.g. Calvin Klein briefs" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Link (optional)</span>
+        <input type="url" id="stock-editor-link" placeholder="https://…" autocomplete="off" />
+      </label>
+      <label class="field">
+        <span>Specification (optional)</span>
+        <input type="text" id="stock-editor-spec" maxlength="120" placeholder="Size, color, option…" autocomplete="off" />
+      </label>
+      <label class="field" style="max-width:120px;">
+        <span>Replace every</span>
+        <input type="number" min="1" id="stock-editor-replace-value" />
+      </label>
+      <label class="field">
+        <span>Unit</span>
+        <div class="segmented" id="stock-editor-replace-unit"></div>
+      </label>
+      <label class="field">
+        <span>Last bought</span>
+        <input type="date" id="stock-editor-last-bought" />
+      </label>
+      <button type="button" class="wishlist-toggle-btn" id="stock-editor-remind-toggle">
+        <svg class="icon wishlist-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3a5 5 0 0 0-5 5v3.2c0 1-.4 2-1.1 2.7L4.5 16h15l-1.4-1.9c-.7-.7-1.1-1.7-1.1-2.7V8a5 5 0 0 0-5-5z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg>
+        <span class="wishlist-toggle-label">Remind me when it's due</span>
+      </button>
+      <p class="import-message error hidden" id="stock-editor-save-error"></p>
+      <div class="form-actions">
+        <button type="button" class="text-btn primary" id="stock-editor-save-btn">Save</button>
+      </div>
+    </div>
+  </template>
+
+  <template id="tpl-stock-item-detail">
+    <div class="sheet">
+      <header class="sheet-header">
+        <span style="flex:1"></span>
+        <button class="icon-btn" id="stock-detail-edit-btn" aria-label="Edit" title="Edit"><svg class="icon" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><path d="M352.9 21.2L308 66.1 445.9 204 490.8 159.1C504.4 145.6 512 127.2 512 108s-7.6-37.6-21.2-51.1L455.1 21.2C441.6 7.6 423.2 0 404 0s-37.6 7.6-51.1 21.2zM274.1 100L58.9 315.1c-10.7 10.7-18.5 24.1-22.6 38.7L.9 481.6c-2.3 8.3 0 17.3 6.2 23.4s15.1 8.5 23.4 6.2l127.8-35.5c14.6-4.1 27.9-11.8 38.7-22.6L412 237.9 274.1 100z"/></svg></button>
+        <button class="icon-btn" id="stock-detail-delete-btn" aria-label="Delete" title="Delete"><svg class="icon" viewBox="0 0 448 512" aria-hidden="true" focusable="false"><path d="M136.7 5.9C141.1-7.2 153.3-16 167.1-16l113.9 0c13.8 0 26 8.8 30.4 21.9L320 32 416 32c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 96C14.3 96 0 81.7 0 64S14.3 32 32 32l96 0 8.7-26.1zM32 144l384 0 0 304c0 35.3-28.7 64-64 64L96 512c-35.3 0-64-28.7-64-64l0-304zm88 64c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24zm104 0c-13.3 0-24 10.7-24 24l0 192c0 13.3 10.7 24 24 24s24-10.7 24-24l0-192c0-13.3-10.7-24-24-24z"/></svg></button>
+        <button class="icon-btn close-btn" aria-label="Close"><svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg></button>
+      </header>
+      <div style="display:flex; align-items:center; gap:14px; padding:0 0 14px;">
+        <span class="stock-detail-icon" id="stock-detail-icon"></span>
+        <div style="min-width:0;">
+          <h2 class="card-detail-title" id="stock-detail-name" style="margin:0 0 2px;"></h2>
+          <p class="card-detail-note" id="stock-detail-type" style="margin:0;"></p>
+        </div>
+      </div>
+      <p class="card-detail-note hidden" id="stock-detail-spec"></p>
+      <a class="card-detail-link hidden" id="stock-detail-link" target="_blank" rel="noopener noreferrer">
+        <svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.2" stroke-linecap="round"><rect x="1.8" y="9" width="10" height="6" rx="3" transform="rotate(-45 6.8 12)"/><rect x="12.2" y="9" width="10" height="6" rx="3" transform="rotate(-45 17.2 12)"/></svg>
+        <span id="stock-detail-link-text"></span>
+        <svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><path d="M9 3h12v12"/><path d="M21 3L10 14"/><path d="M17 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h6"/></svg>
+      </a>
+      <p class="card-detail-section-label">Restocking</p>
+      <div id="stock-detail-restock-box" class="stock-restock-box"></div>
+      <button type="button" class="wishlist-toggle-btn" id="stock-detail-remind-toggle">
+        <svg class="icon wishlist-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M12 3a5 5 0 0 0-5 5v3.2c0 1-.4 2-1.1 2.7L4.5 16h15l-1.4-1.9c-.7-.7-1.1-1.7-1.1-2.7V8a5 5 0 0 0-5-5z"/><path d="M9.5 19a2.5 2.5 0 0 0 5 0"/></svg>
+        <span class="wishlist-toggle-label">Remind me when it's due</span>
+      </button>
+      <div class="form-actions">
+        <button type="button" class="text-btn secondary" id="stock-detail-ics-btn">Download .ics</button>
+        <button type="button" class="text-btn secondary" id="stock-detail-gcal-btn">Add to Google Calendar</button>
+      </div>
     </div>
   </template>
 
@@ -390,6 +507,10 @@
       <button type="button" class="menu-item" id="measurements-btn">
         <svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M6 7v4M10 7v3M14 7v4M18 7v3"/></svg>
         <span>Sizes &amp; measurements</span>
+      </button>
+      <button type="button" class="menu-item" id="stock-items-btn">
+        <svg class="icon icon-line" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.1" stroke-linejoin="round" stroke-linecap="round"><path d="M3 8l9-4.5 9 4.5-9 4.5-9-4.5z"/><path d="M3 8v8l9 4.5 9-4.5V8"/><path d="M12 12.5V21"/></svg>
+        <span>Stock items</span>
       </button>
       <button type="button" class="menu-item" id="instructions-btn">
         <svg class="icon" viewBox="0 0 512 512" aria-hidden="true" focusable="false"><circle cx="256" cy="256" r="216" fill="none" stroke="currentColor" stroke-width="40" /><circle cx="256" cy="176" r="28" /><rect x="228" y="232" width="56" height="180" rx="12" /></svg>
