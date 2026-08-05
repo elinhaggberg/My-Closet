@@ -80,6 +80,7 @@ export function renderHome(root, nav) {
     const grid = document.getElementById("home-grid");
     const cards = getCards().sort((a, b) => b.createdAt - a.createdAt);
     if (cards.length === 0) {
+      resetLazyGrid();
       const empty = document.createElement("p");
       empty.className = "empty-state";
       empty.textContent = "Nothing saved yet. Tap + to save your first link or photo.";
