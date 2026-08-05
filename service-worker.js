@@ -1,4 +1,4 @@
-const CACHE_NAME = "my-closet-v7";
+const CACHE_NAME = "my-closet-v8";
 const APP_SHELL = [
   "./",
   "./index.html",
@@ -8,6 +8,10 @@ const APP_SHELL = [
   "./js/storage.js",
   "./js/imageStore.js",
   "./js/lazyImage.js",
+  "./js/supabaseOAuth.js",
+  "./js/cloudSyncInstall.js",
+  "./js/cloudBackup.js",
+  "./js/cloudImageSync.js",
   "./js/sizing.js",
   "./js/stock.js",
   "./js/stockIcons.js",

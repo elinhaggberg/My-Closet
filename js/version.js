@@ -12,6 +12,7 @@ export const CHANGELOG = [
     changes: [
       "Home and each board's grid now load images as you scroll to them instead of all at once -- keeps things smooth once you've saved a lot of photos, since nothing behind the fold does an IndexedDB lookup until you actually scroll near it.",
       "Home now warns once local storage gets close to full, instead of the first sign of trouble being a failed save.",
+      "Added Cloud Sync (Settings -> Cloud sync): optionally connect your own free Supabase project for a full, passphrase-protected cloud backup of everything you've saved, photos included -- off by default, and nothing is ever sent anywhere unless you turn it on.",
     ],
   },
   {
