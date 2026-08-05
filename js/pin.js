@@ -1,7 +1,7 @@
 import { formatPrice, hostnameFor } from "./util.js";
 import { computeSizeRecommendation } from "./sizing.js";
 import { getLatestMeasurement } from "./storage.js";
-import { resolveImageSrc } from "./imageStore.js";
+import { lazyLoadImage } from "./lazyImage.js";
 import { ICON_CHECK, ICON_WARNING, ICON_IMAGE } from "./icons.js";
 
 // Builds one Pinterest-style grid tile from the shared <template id="tpl-pin-card">.
@@ -14,20 +14,17 @@ export function createPinNode(card, onOpen) {
 
   if (card.image) {
     img.alt = card.title || "";
-    // Shown immediately with its aspect-ratio reserved (see style.css) even
-    // though the actual src resolves async (a local upload lives in
-    // IndexedDB) — otherwise masonry.js's column-balancing measurement runs
-    // before any image has rendered and badly misjudges which column is
-    // shortest. Falls back to the placeholder only if resolution fails.
-    img.classList.remove("hidden");
-    resolveImageSrc(card.image).then((src) => {
-      if (src) {
-        img.src = src;
-      } else {
-        img.classList.add("hidden");
-        placeholder.innerHTML = ICON_IMAGE;
-        placeholder.classList.remove("hidden");
-      }
+    // lazyLoadImage defers the actual resolve (an IndexedDB read for a
+    // local upload) until the card scrolls near the viewport, but still
+    // shows the image element immediately with its aspect-ratio reserved
+    // (see style.css) -- otherwise masonry.js's column-balancing
+    // measurement runs before any image has rendered and badly misjudges
+    // which column is shortest. Falls back to the placeholder only if
+    // resolution fails.
+    lazyLoadImage(img, card.image, () => {
+      img.classList.add("hidden");
+      placeholder.innerHTML = ICON_IMAGE;
+      placeholder.classList.remove("hidden");
     });
   } else {
     placeholder.innerHTML = ICON_IMAGE;

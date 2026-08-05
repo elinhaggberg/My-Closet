@@ -1,4 +1,5 @@
 import { IDB_PREFIX, putImage, getImage, deleteImage, dataUrlToBlob, blobToDataUrl } from "./imageStore.js";
+import { getStorageUsage } from "./lazyImage.js";
 
 const CARDS_KEY = "mc_cards_v1";
 const BOARDS_KEY = "mc_boards_v1";
@@ -12,6 +13,7 @@ const HOME_TITLE_KEY = "mc_home_title_v1";
 const LAST_SEEN_VERSION_KEY = "mc_last_seen_version_v1";
 const LAST_BACKUP_KEY = "mc_last_backup_at_v1";
 const BACKUP_BANNER_DISMISSED_KEY = "mc_backup_banner_dismissed_at_v1";
+const STORAGE_WARNING_DISMISSED_KEY = "mc_storage_warning_dismissed_at_v1";
 const FIRST_OPEN_KEY = "mc_first_open_at_v1";
 const ONBOARDING_SEEN_KEY = "mc_onboarding_seen_v1";
 const IMAGES_MIGRATED_KEY = "mc_images_migrated_v1";
@@ -577,6 +579,26 @@ export function shouldShowBackupBanner() {
 
   const dismissedAt = Number(localStorage.getItem(BACKUP_BANNER_DISMISSED_KEY));
   if (dismissedAt && Date.now() - dismissedAt < BACKUP_SNOOZE_MS) return false;
+
+  return true;
+}
+
+const STORAGE_WARNING_SNOOZE_MS = 14 * 24 * 60 * 60 * 1000; // same 2-week cadence as the backup nudge
+
+export function dismissStorageWarningBanner() {
+  localStorage.setItem(STORAGE_WARNING_DISMISSED_KEY, String(Date.now()));
+}
+
+// Warns once local storage crosses 80% of the device's quota for this app,
+// since finding out via a QuotaExceededError mid-upload or mid-sync is a
+// much worse time than a quiet heads-up on Home. Best-effort: silently
+// skipped wherever navigator.storage.estimate() isn't supported.
+export async function shouldShowStorageWarning() {
+  const usage = await getStorageUsage();
+  if (!usage || usage.ratio < 0.8) return false;
+
+  const dismissedAt = Number(localStorage.getItem(STORAGE_WARNING_DISMISSED_KEY));
+  if (dismissedAt && Date.now() - dismissedAt < STORAGE_WARNING_SNOOZE_MS) return false;
 
   return true;
 }
