@@ -36,6 +36,7 @@ export function renderBoard(root, nav, boardId) {
     const grid = document.getElementById("board-grid");
     const cards = getCardsForBoard(board.id);
     if (cards.length === 0) {
+      resetLazyGrid();
       const empty = document.createElement("p");
       empty.className = "empty-state";
       empty.textContent = isWishlist ? "Nothing in your wishlist yet." : "Nothing saved to this board yet.";
