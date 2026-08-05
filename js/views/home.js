@@ -5,6 +5,8 @@ import {
   markBackedUp,
   dismissBackupBanner,
   shouldShowBackupBanner,
+  shouldShowStorageWarning,
+  dismissStorageWarningBanner,
   getStockItems,
   dismissRestockBanner,
   shouldShowRestockBanner,
@@ -12,6 +14,7 @@ import {
 import { createPinNode } from "../pin.js";
 import { renderTabbar } from "../tabbar.js";
 import { renderMasonry } from "../masonry.js";
+import { resetLazyGrid } from "../lazyImage.js";
 import { openSaveChoice } from "../save.js";
 import { openCardDetail } from "../cardDetail.js";
 import { openSettingsMenu } from "../settingsMenu.js";
@@ -45,6 +48,16 @@ export function renderHome(root, nav) {
     });
   }
 
+  const storageBanner = document.getElementById("storage-warning-banner");
+  shouldShowStorageWarning().then((shouldShow) => {
+    if (!shouldShow) return;
+    storageBanner.classList.remove("hidden");
+    storageBanner.querySelector("#storage-warning-dismiss-btn").addEventListener("click", () => {
+      dismissStorageWarningBanner();
+      storageBanner.classList.add("hidden");
+    });
+  });
+
   const restockBanner = document.getElementById("restock-banner");
   const dueItems = getStockItems().filter((i) => i.remindEnabled && isDue(i));
   if (shouldShowRestockBanner(dueItems.length)) {
@@ -73,6 +86,7 @@ export function renderHome(root, nav) {
       grid.replaceChildren(empty);
       return;
     }
+    resetLazyGrid();
     renderMasonry(grid, cards, (card) => createPinNode(card, (c) => openCardDetail(nav, c, renderList)));
   }
 }
