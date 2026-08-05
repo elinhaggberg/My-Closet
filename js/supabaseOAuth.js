@@ -6,13 +6,11 @@
 // reaches this file -- it stays server-side in api/oauth-callback.js and
 // api/oauth-refresh.js, which is the only reason those two functions exist.
 //
-// TODO: register a dedicated Supabase OAuth application for My Closet
-// (redirect URI `${this app's own domain}/api/oauth-callback`) and replace
-// this placeholder with its real client_id -- must match the CLIENT_ID
+// Registered Supabase OAuth application for My Closet (redirect URI is this
+// app's own domain + /api/oauth-callback) -- must match the CLIENT_ID
 // constant in api/oauth-callback.js and api/oauth-refresh.js exactly, all
-// three are meant to be the same value. "Connect Supabase" will fail until
-// this is filled in.
-const CLIENT_ID = "TODO_MY_CLOSET_SUPABASE_OAUTH_CLIENT_ID";
+// three are meant to be the same value.
+const CLIENT_ID = "ee45ea03-7d60-4a61-9ec4-b9279a71796c";
 const TOKEN_KEY = "mc_supabase_oauth_v1";
 const STATE_KEY = "mc_supabase_oauth_state_v1";
 const PROJECT_KEY = "mc_supabase_project_v1";

@@ -8,13 +8,12 @@
 // of ours to hold them in instead, by design: the browser is the only place
 // they're stored, same principle as everything else in this app.
 
-// TODO: register a dedicated Supabase OAuth application for My Closet
-// (redirect URI `${this app's own domain}/api/oauth-callback`) and replace
-// this placeholder with its real client_id -- must match the CLIENT_ID in
-// js/supabaseOAuth.js and api/oauth-refresh.js exactly, all three are meant
-// to be the same value. Also set SUPABASE_OAUTH_CLIENT_SECRET (that OAuth
-// app's client secret) as an env var on this deployment.
-const CLIENT_ID = "TODO_MY_CLOSET_SUPABASE_OAUTH_CLIENT_ID";
+// Registered Supabase OAuth application for My Closet -- must match the
+// CLIENT_ID in js/supabaseOAuth.js and api/oauth-refresh.js exactly, all
+// three are meant to be the same value. Also requires
+// SUPABASE_OAUTH_CLIENT_SECRET (that OAuth app's client secret) set as an
+// env var on this deployment.
+const CLIENT_ID = "ee45ea03-7d60-4a61-9ec4-b9279a71796c";
 
 module.exports = async (req, res) => {
   const origin = `https://${req.headers.host}`;
