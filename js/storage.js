@@ -316,6 +316,11 @@ export function createChecklist(name) {
   return list;
 }
 
+// A child item can't have its own children — nesting is a single level deep.
+export function makeChecklistItem({ text = "" } = {}) {
+  return { id: uid(), text, checked: false, children: [] };
+}
+
 export function saveChecklist(list) {
   const lists = getChecklists();
   const idx = lists.findIndex((l) => l.id === list.id);

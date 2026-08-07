@@ -50,7 +50,7 @@ export function renderLists(root, nav) {
       if (!name) return;
       const list = createChecklist(name);
       sheet.close();
-      nav.toList(list.id);
+      nav.toListEdit(list.id);
     });
   }
 }

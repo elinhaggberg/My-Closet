@@ -431,16 +431,8 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   flex-direction: column;
   gap: var(--gap);
 }
-.todo-checklist-row {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  cursor: pointer;
-}
+
+/* Checkbox shared by the view (card rows) and edit (slim rows) screens. */
 .todo-checkbox {
   width: 24px;
   height: 24px;
@@ -458,26 +450,102 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
   color: var(--accent-text);
 }
 .todo-checkbox .icon { width: 0.75em; height: 0.75em; }
-.todo-item-label { flex: 1; min-width: 0; word-break: break-word; font-size: 1rem; color: var(--text); }
-.todo-checklist-row.checked .todo-item-label { color: var(--text-dim); text-decoration: line-through; }
 :root[data-theme="playful"] .todo-checkbox { border-radius: 10px; }
-.add-item-row {
+
+/* View screen: read-only card rows, tap anywhere to toggle checked. */
+.todo-checklist-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 14px 4px 4px;
+  cursor: pointer;
 }
-.add-item-row input {
-  flex: 1;
-  min-width: 0;
+.todo-checklist-row.nested {
+  margin-left: 24px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
+}
+.todo-item-label { flex: 1; min-width: 0; word-break: break-word; font-size: 1rem; color: var(--text); }
+.todo-checklist-row.checked .todo-item-label { color: var(--text-dim); text-decoration: line-through; }
+
+/* Edit screen: slim draggable rows, no card chrome. */
+.todo-title-input {
+  flex: 0 0 auto;
+  display: block;
+  width: calc(100% - 32px);
+  margin: 4px 16px 14px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: var(--font-heading);
+  font-size: 1.15rem;
+  font-weight: 700;
+  padding: 6px 2px;
+}
+.todo-title-input:focus { outline: none; border-color: var(--accent); }
+:root[data-theme="playful"] .todo-title-input { font-size: 1.5rem; }
+
+#checklist-edit-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 16px 16px;
+}
+.todo-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.todo-item.nested {
+  margin-left: 24px;
+}
+#checklist-edit-item-list .todo-item {
+  background: none;
+  border: none;
+  padding: 4px;
+}
+.drag-handle {
+  touch-action: none;
+  -webkit-user-drag: none;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  font-size: 1.15rem;
+  cursor: grab;
+}
+.drag-handle:active { color: var(--text); }
+.todo-item, .todo-item-group {
+  -webkit-user-drag: none;
+}
+.todo-item.dragging {
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.5);
+  opacity: 0.95;
+  cursor: grabbing;
+  pointer-events: none;
+}
+.drag-placeholder {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+}
+.todo-item-text {
+  flex: 1;
+  border: none;
+  background: transparent;
   color: var(--text);
   font-size: 1rem;
+  padding: 2px 0;
+  min-width: 0;
 }
-.add-item-row input:focus { outline: none; border-color: var(--accent); }
+.todo-item-text:focus { outline: none; }
+.todo-item-text::placeholder { color: var(--text-dim); }
+.todo-item.checked .todo-item-text { color: var(--text-dim); text-decoration: line-through; }
 
 /* Save choice sheet */
 .choice-btn {
@@ -1126,8 +1194,7 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 :root[data-theme="playful"] .board-chip { border-radius: 20px; }
 :root[data-theme="playful"] .pinned-row,
 :root[data-theme="playful"] .wishlist-toggle-btn,
-:root[data-theme="playful"] .price-toggle-btn,
-:root[data-theme="playful"] .add-item-row input { border-radius: 16px; }
+:root[data-theme="playful"] .price-toggle-btn { border-radius: 16px; }
 
 /* Playful theme: bouncier, more energetic press feedback. */
 :root[data-theme="playful"] .fab,
