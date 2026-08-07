@@ -1,6 +1,7 @@
-import { getChecklist, saveChecklist, deleteChecklist, exportChecklistData, uid } from "../storage.js";
+import { getChecklist, saveChecklist, deleteChecklist, exportChecklistData } from "../storage.js";
 import { openSheet } from "../sheet.js";
 import { shareOrDownload, filenameFor } from "../share.js";
+import { checklistMeta, toggleChecklistItemChecked } from "../util.js";
 
 export function renderChecklist(root, nav, listId) {
   const list = getChecklist(listId);
@@ -13,42 +14,41 @@ export function renderChecklist(root, nav, listId) {
   root.replaceChildren(tpl.content.cloneNode(true));
   root.querySelector(".back-btn").addEventListener("click", () => nav.toLists());
   document.getElementById("checklist-title").textContent = list.name;
+  document.getElementById("checklist-edit-btn").addEventListener("click", () => nav.toListEdit(list.id));
   document.getElementById("checklist-menu-btn").addEventListener("click", openMenu);
 
-  const addForm = document.getElementById("add-item-form");
-  addForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const text = addForm.text.value.trim();
-    if (!text) return;
-    list.items.push({ id: uid(), text, checked: false });
-    saveChecklist(list);
-    addForm.reset();
-    renderItems();
-  });
-
+  renderHeader();
   renderItems();
+
+  function renderHeader() {
+    document.getElementById("checklist-meta").textContent = checklistMeta(list);
+  }
 
   function renderItems() {
     const container = document.getElementById("checklist-items");
     if (list.items.length === 0) {
       const empty = document.createElement("p");
       empty.className = "empty-state";
-      empty.textContent = "No items yet. Add the first one below.";
+      empty.textContent = "No items yet. Tap edit to add some.";
       container.replaceChildren(empty);
       return;
     }
-    container.replaceChildren(...list.items.map(renderItem));
+    const rows = [];
+    for (const item of list.items) {
+      rows.push(createRow(item));
+      for (const child of item.children || []) {
+        rows.push(createRow(child, true));
+      }
+    }
+    container.replaceChildren(...rows);
   }
 
-  function renderItem(item) {
+  function createRow(item, isChild = false) {
     const row = document.createElement("div");
     row.className = "todo-checklist-row";
+    if (isChild) row.classList.add("nested");
     row.classList.toggle("checked", item.checked);
-    row.addEventListener("click", () => {
-      item.checked = !item.checked;
-      saveChecklist(list);
-      renderItems();
-    });
+    row.addEventListener("click", () => toggleItem(item.id));
 
     const checkbox = document.createElement("button");
     checkbox.type = "button";
@@ -62,21 +62,15 @@ export function renderChecklist(root, nav, listId) {
     text.className = "todo-item-label";
     text.textContent = item.text;
 
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "icon-btn remove-btn";
-    removeBtn.setAttribute("aria-label", "Remove item");
-    removeBtn.innerHTML =
-      '<svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg>';
-    removeBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      list.items = list.items.filter((i) => i.id !== item.id);
-      saveChecklist(list);
-      renderItems();
-    });
-
-    row.append(checkbox, text, removeBtn);
+    row.append(checkbox, text);
     return row;
+  }
+
+  function toggleItem(id) {
+    toggleChecklistItemChecked(list, id);
+    saveChecklist(list);
+    renderHeader();
+    renderItems();
   }
 
   function openMenu() {

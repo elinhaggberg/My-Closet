@@ -4,6 +4,7 @@ import { renderBoard } from "./views/board.js";
 import { renderMeasurements } from "./views/measurements.js";
 import { renderLists } from "./views/lists.js";
 import { renderChecklist } from "./views/checklist.js";
+import { renderChecklistEdit } from "./views/checklistEdit.js";
 import { renderStockItems } from "./views/stockItems.js";
 import { applyTheme } from "./theme.js";
 import {
@@ -63,6 +64,9 @@ const nav = {
   toList: (id) => {
     location.hash = `#/list/${encodeURIComponent(id)}`;
   },
+  toListEdit: (id) => {
+    location.hash = `#/list-edit/${encodeURIComponent(id)}`;
+  },
   toStock: () => {
     location.hash = "#/stock";
   },
@@ -70,7 +74,7 @@ const nav = {
 
 function route() {
   const hash = location.hash || "#/home";
-  const match = hash.match(/^#\/([a-z]+)(?:\/(.+))?$/);
+  const match = hash.match(/^#\/([a-z-]+)(?:\/(.+))?$/);
   const view = match ? match[1] : "home";
   const param = match && match[2] ? decodeURIComponent(match[2]) : null;
 
@@ -97,6 +101,13 @@ function route() {
         return;
       }
       renderChecklist(root, nav, param);
+      break;
+    case "list-edit":
+      if (!param) {
+        nav.toLists();
+        return;
+      }
+      renderChecklistEdit(root, nav, param);
       break;
     case "stock":
       renderStockItems(root, nav);
