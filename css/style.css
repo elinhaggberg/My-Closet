@@ -426,40 +426,41 @@ h1, h2, h3 { margin: 0; font-weight: 600; font-family: var(--font-heading); }
 .list-tile-icon .icon { width: 2.2rem; height: 2.2rem; }
 
 .checklist-body { padding: 4px 16px 16px; }
-.list-item {
+#checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+.todo-checklist-row {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 4px;
-  border-bottom: 1px solid var(--border);
-}
-.list-item:last-child { border-bottom: none; }
-.list-item-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  flex-shrink: 0;
-  background: var(--surface);
-  position: relative;
+  gap: 10px;
   cursor: pointer;
 }
-.list-item-checkbox:checked { background: var(--accent); border-color: var(--accent); }
-.list-item-checkbox:checked::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 44%;
-  width: 5px;
-  height: 10px;
-  border: solid var(--accent-text);
-  border-width: 0 2px 2px 0;
-  transform: translate(-50%, -50%) rotate(45deg);
+.todo-checkbox {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent;
 }
-.list-item-text { flex: 1; min-width: 0; word-break: break-word; }
-.list-item:has(.list-item-checkbox:checked) .list-item-text { text-decoration: line-through; color: var(--text-dim); }
+.todo-checkbox.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+.todo-checkbox .icon { width: 0.75em; height: 0.75em; }
+.todo-item-label { flex: 1; min-width: 0; word-break: break-word; font-size: 1rem; color: var(--text); }
+.todo-checklist-row.checked .todo-item-label { color: var(--text-dim); text-decoration: line-through; }
+:root[data-theme="playful"] .todo-checkbox { border-radius: 10px; }
 .add-item-row {
   display: flex;
   align-items: center;

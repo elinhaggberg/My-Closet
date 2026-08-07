@@ -41,21 +41,25 @@ export function renderChecklist(root, nav, listId) {
   }
 
   function renderItem(item) {
-    const row = document.createElement("label");
-    row.className = "list-item";
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.className = "list-item-checkbox";
-    checkbox.checked = item.checked;
-    checkbox.addEventListener("change", () => {
-      item.checked = checkbox.checked;
+    const row = document.createElement("div");
+    row.className = "todo-checklist-row";
+    row.classList.toggle("checked", item.checked);
+    row.addEventListener("click", () => {
+      item.checked = !item.checked;
       saveChecklist(list);
       renderItems();
     });
 
+    const checkbox = document.createElement("button");
+    checkbox.type = "button";
+    checkbox.className = "todo-checkbox";
+    checkbox.classList.toggle("checked", item.checked);
+    checkbox.setAttribute("aria-label", "Toggle checked");
+    checkbox.innerHTML =
+      '<svg class="icon" viewBox="0 0 448 512" aria-hidden="true" focusable="false"><path d="M438.6 105.4c12.5 12.5 12.5 32.8 0 45.3l-256 256c-12.5 12.5-32.8 12.5-45.3 0l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0L160 338.7 393.4 105.4c12.5-12.5 32.8-12.5 45.3 0z"/></svg>';
+
     const text = document.createElement("span");
-    text.className = "list-item-text";
+    text.className = "todo-item-label";
     text.textContent = item.text;
 
     const removeBtn = document.createElement("button");
@@ -65,7 +69,7 @@ export function renderChecklist(root, nav, listId) {
     removeBtn.innerHTML =
       '<svg class="icon" viewBox="0 0 384 512" aria-hidden="true" focusable="false"><path d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/></svg>';
     removeBtn.addEventListener("click", (e) => {
-      e.preventDefault();
+      e.stopPropagation();
       list.items = list.items.filter((i) => i.id !== item.id);
       saveChecklist(list);
       renderItems();
