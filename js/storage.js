@@ -600,12 +600,24 @@ export async function importData(data) {
 
 // ---- Preferences ----
 
+// Bumped by every setter below whose value is part of the Cloud Backup
+// prefs bundle (see getPrefsSnapshot/applyPrefsSnapshot near the bottom of
+// this section) -- gives that bundle a real "last changed" timestamp for
+// last-write-wins, the same role createdAt/updatedAt plays for content
+// records, without needing to touch every call site individually.
+const PREFS_UPDATED_AT_KEY = "mc_prefs_updated_at_v1";
+
+function bumpPrefsUpdatedAt() {
+  localStorage.setItem(PREFS_UPDATED_AT_KEY, new Date().toISOString());
+}
+
 export function getThemePref() {
   return readJSON(THEME_KEY, {});
 }
 
 export function setThemePref(pref) {
   writeJSON(THEME_KEY, pref);
+  bumpPrefsUpdatedAt();
 }
 
 export function getUnit() {
@@ -614,6 +626,7 @@ export function getUnit() {
 
 export function setUnit(unit) {
   localStorage.setItem(UNIT_KEY, unit);
+  bumpPrefsUpdatedAt();
 }
 
 export function getHomeTitle() {
@@ -624,6 +637,37 @@ export function setHomeTitle(value) {
   const trimmed = (value || "").trim();
   if (trimmed) localStorage.setItem(HOME_TITLE_KEY, trimmed);
   else localStorage.removeItem(HOME_TITLE_KEY);
+  bumpPrefsUpdatedAt();
+}
+
+// ---- Cloud Backup prefs sync ----
+//
+// Theme, unit, and home title are also part of a local backup file (see
+// exportBackupData/importData above) -- bundled the same way into a single
+// Cloud Backup record (store: "prefs") so a device that pulls from Cloud
+// Backup gets its look and title back too, not just its cards. See
+// js/cloudBackup.js's pushAll/pullChanges for where this record travels.
+export function getPrefsSnapshot() {
+  return { theme: getThemePref(), unit: getUnit(), homeTitle: getHomeTitle() };
+}
+
+export function getPrefsUpdatedAt() {
+  return localStorage.getItem(PREFS_UPDATED_AT_KEY) || null;
+}
+
+// Applied from a Cloud Backup pull -- unlike the setters above, stamps
+// PREFS_UPDATED_AT_KEY with the record's own updatedAt (not "now") so this
+// device's next push doesn't immediately re-send what it just received as
+// if it were a fresh local edit.
+export function applyPrefsSnapshot(prefs, updatedAt) {
+  if (!prefs) return;
+  if (prefs.theme) writeJSON(THEME_KEY, prefs.theme);
+  if (prefs.unit) localStorage.setItem(UNIT_KEY, prefs.unit);
+  if (prefs.homeTitle) {
+    const trimmed = String(prefs.homeTitle).trim();
+    if (trimmed) localStorage.setItem(HOME_TITLE_KEY, trimmed);
+  }
+  if (updatedAt) localStorage.setItem(PREFS_UPDATED_AT_KEY, updatedAt);
 }
 
 export function getLastSeenVersion() {

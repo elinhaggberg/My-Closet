@@ -16,6 +16,10 @@ import {
   clearTombstones,
   applyRemoteDeletion,
   patchCardImage,
+  getHomeTitle,
+  getPrefsSnapshot,
+  getPrefsUpdatedAt,
+  applyPrefsSnapshot,
 } from "./storage.js";
 import { registerRemoteResolver } from "./imageStore.js";
 import { createStorageResolver, STORAGE_PREFIX } from "./cloudImageSync.js";
@@ -170,11 +174,19 @@ migrationNotice.then(() => {
 
 // Inert unless Cloud Backup has actually been installed and configured
 // (see js/cloudBackup.js) -- a no-op otherwise. Runs a sync immediately,
-// then periodically/on-visibility-change while the app stays open; a
-// background pull doesn't re-render whatever view happens to be open right
-// now, so anything it brings in shows up on the next navigation or reload
-// rather than instantly -- a known limitation, not a bug.
-startAutoSync({ getCards, upsertRecords, getTombstones, clearTombstones, applyRemoteDeletion });
+// then periodically/on-visibility-change while the app stays open. Theme
+// and title are re-applied live after every round via onSynced below; a
+// background pull of cards still doesn't re-render whatever view happens
+// to be open right now, so content shows up on the next navigation or
+// reload rather than instantly -- a known limitation, not a bug.
+startAutoSync(
+  { getCards, upsertRecords, getTombstones, clearTombstones, applyRemoteDeletion, getPrefsSnapshot, getPrefsUpdatedAt, applyPrefsSnapshot },
+  () => {
+    applyTheme();
+    const homeTitleEl = document.getElementById("home-title");
+    if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
+  }
+);
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
