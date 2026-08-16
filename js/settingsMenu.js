@@ -8,6 +8,8 @@ import {
   setHomeTitle,
   markBackedUp,
   getCards,
+  getBoards,
+  getChecklists,
   upsertRecords,
   getTombstones,
   clearTombstones,
@@ -47,6 +49,8 @@ import { ICON_CHECK } from "./icons.js";
 
 const STORAGE_FNS = {
   getCards,
+  getBoards,
+  getChecklists,
   upsertRecords,
   getTombstones,
   clearTombstones,

@@ -11,6 +11,8 @@ import {
   createEmptyCard,
   migrateImagesToIndexedDB,
   getCards,
+  getBoards,
+  getChecklists,
   upsertRecords,
   getTombstones,
   clearTombstones,
@@ -180,7 +182,18 @@ migrationNotice.then(() => {
 // to be open right now, so content shows up on the next navigation or
 // reload rather than instantly -- a known limitation, not a bug.
 startAutoSync(
-  { getCards, upsertRecords, getTombstones, clearTombstones, applyRemoteDeletion, getPrefsSnapshot, getPrefsUpdatedAt, applyPrefsSnapshot },
+  {
+    getCards,
+    getBoards,
+    getChecklists,
+    upsertRecords,
+    getTombstones,
+    clearTombstones,
+    applyRemoteDeletion,
+    getPrefsSnapshot,
+    getPrefsUpdatedAt,
+    applyPrefsSnapshot,
+  },
   () => {
     applyTheme();
     const homeTitleEl = document.getElementById("home-title");

@@ -42,16 +42,16 @@ function writeJSON(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// A deleted card leaves no trace in CARDS_KEY to ever tell another device
+// A deleted record leaves no trace in its store to ever tell another device
 // it's gone -- this is that trace. Recorded on every delete regardless of
 // whether Cloud Backup is even configured (this module has no business
 // knowing that), consumed and cleared by js/cloudBackup.js's pushAll once
 // it's actually been synced. Harmless dead weight otherwise: a handful of
 // small {store, recordId, deletedAt} rows for anyone who never turns Cloud
 // Backup on.
-function recordTombstone(recordId) {
+function recordTombstone(store, recordId) {
   const tombstones = readJSON(TOMBSTONES_KEY, []);
-  tombstones.push({ id: `cards:${recordId}`, store: "cards", recordId, deletedAt: Date.now() });
+  tombstones.push({ id: `${store}:${recordId}`, store, recordId, deletedAt: Date.now() });
   writeJSON(TOMBSTONES_KEY, tombstones);
 }
 
@@ -83,7 +83,7 @@ export function getBoard(id) {
 
 export function createBoard(name) {
   const boards = getBoards();
-  const board = { id: uid(), name: name.trim(), isSystem: false, createdAt: Date.now() };
+  const board = { id: uid(), name: name.trim(), isSystem: false, createdAt: Date.now(), updatedAt: Date.now() };
   boards.push(board);
   writeJSON(BOARDS_KEY, boards);
   return board;
@@ -93,15 +93,19 @@ export function renameBoard(id, name) {
   const boards = getBoards();
   const idx = boards.findIndex((b) => b.id === id);
   if (idx < 0 || boards[idx].isSystem) return null;
-  boards[idx] = { ...boards[idx], name: name.trim() };
+  boards[idx] = { ...boards[idx], name: name.trim(), updatedAt: Date.now() };
   writeJSON(BOARDS_KEY, boards);
   return boards[idx];
 }
 
-export async function deleteBoard(id) {
+// { tombstone: false } is for js/cloudBackup.js's applyRemoteDeletion only,
+// replaying a deletion that already happened on another device -- same
+// reasoning as deleteCard's option below.
+export async function deleteBoard(id, { tombstone = true } = {}) {
   const board = getBoard(id);
   if (!board || board.isSystem) return;
   writeJSON(BOARDS_KEY, getBoards().filter((b) => b.id !== id));
+  if (tombstone) recordTombstone("boards", id);
   const cards = getCards();
   for (const card of cards) {
     if (card.boardIds.includes(id)) {
@@ -163,7 +167,7 @@ export async function deleteCard(id, { tombstone = true } = {}) {
     await deleteImage(card.image.slice(IDB_PREFIX.length)).catch(() => {});
   }
   writeJSON(CARDS_KEY, getCards().filter((c) => c.id !== id));
-  if (tombstone) recordTombstone(id);
+  if (tombstone) recordTombstone("cards", id);
 }
 
 // The only caller of the { tombstone: false } option above -- js/cloudBackup.js's
@@ -173,6 +177,8 @@ export async function deleteCard(id, { tombstone = true } = {}) {
 // feature code.
 export async function applyRemoteDeletion(store, recordId) {
   if (store === "cards") return deleteCard(recordId, { tombstone: false });
+  if (store === "boards") return deleteBoard(recordId, { tombstone: false });
+  if (store === "checklists") return deleteChecklist(recordId, { tombstone: false });
 }
 
 // A pulled record's image arrives as either a portable data: URI (from an
@@ -192,13 +198,26 @@ async function reviveImage(image, id) {
   }
 }
 
+function upsertById(key, records) {
+  const existing = readJSON(key, []);
+  for (const r of records) {
+    const idx = existing.findIndex((e) => e.id === r.id);
+    if (idx >= 0) existing[idx] = r;
+    else existing.push(r);
+  }
+  writeJSON(key, existing);
+}
+
 // Generic upsert-by-id, used only by Cloud Backup's pull/merge step
 // (js/cloudBackup.js) -- writes each record exactly as given, matching by
 // its own id, unlike importData() below whose always-new-id behavior is
 // only correct for a one-time file import, never for ongoing sync where two
 // devices need to agree on the same id for the same record.
 export async function upsertRecords(store, records) {
-  if (store !== "cards" || !records.length) return;
+  if (!records.length) return;
+  if (store === "boards") return upsertById(BOARDS_KEY, records);
+  if (store === "checklists") return upsertById(CHECKLISTS_KEY, records);
+  if (store !== "cards") return;
   const revived = await Promise.all(records.map(async (r) => ({ ...r, image: await reviveImage(r.image, r.id) })));
   const cards = getCards();
   for (const r of revived) {
@@ -310,7 +329,7 @@ export function getChecklist(id) {
 
 export function createChecklist(name) {
   const lists = getChecklists();
-  const list = { id: uid(), name: name.trim(), createdAt: Date.now(), items: [] };
+  const list = { id: uid(), name: name.trim(), createdAt: Date.now(), updatedAt: Date.now(), items: [] };
   lists.push(list);
   writeJSON(CHECKLISTS_KEY, lists);
   return list;
@@ -323,15 +342,20 @@ export function makeChecklistItem({ text = "" } = {}) {
 
 export function saveChecklist(list) {
   const lists = getChecklists();
+  const withTimestamp = { ...list, updatedAt: Date.now() };
   const idx = lists.findIndex((l) => l.id === list.id);
-  if (idx >= 0) lists[idx] = list;
-  else lists.push(list);
+  if (idx >= 0) lists[idx] = withTimestamp;
+  else lists.push(withTimestamp);
   writeJSON(CHECKLISTS_KEY, lists);
-  return list;
+  return withTimestamp;
 }
 
-export function deleteChecklist(id) {
+// { tombstone: false } is for js/cloudBackup.js's applyRemoteDeletion only,
+// replaying a deletion that already happened on another device -- same
+// reasoning as deleteCard's option above.
+export function deleteChecklist(id, { tombstone = true } = {}) {
   writeJSON(CHECKLISTS_KEY, getChecklists().filter((l) => l.id !== id));
+  if (tombstone) recordTombstone("checklists", id);
 }
 
 export function exportChecklistData(list) {
