@@ -19,12 +19,14 @@ const PERIODIC_INTERVAL_MS = 15 * 60 * 1000;
 // storage.js's BOARDS_KEY/CHECKLISTS_KEY -- so they need to travel through
 // push/pull too, or a restore on a fresh device leaves cards pointing at
 // board ids nothing locally knows the name of, and checklists missing
-// entirely.
-const SYNCABLE_STORES = ["cards", "boards", "checklists"];
-// A single non-content record (theme/unit/homeTitle, see storage.js's
-// getPrefsSnapshot) travels through the same push/pull API as everything
-// else, under its own reserved store name and a fixed record id since
-// there's only ever one "current prefs" per account.
+// entirely. Measurements (dated history entries) and stock items are the
+// same story -- their own id-keyed local stores, not part of any card.
+const SYNCABLE_STORES = ["cards", "boards", "checklists", "measurements", "stockItems"];
+// A single non-content record (theme/unit/homeTitle/sizePrefs/
+// measurementNotes, see storage.js's getPrefsSnapshot) travels through the
+// same push/pull API as everything else, under its own reserved store name
+// and a fixed record id since there's only ever one "current prefs" per
+// account.
 const PREFS_STORE = "prefs";
 const PREFS_RECORD_ID = "prefs";
 
@@ -161,6 +163,8 @@ export async function pushAll({
   getCards,
   getBoards,
   getChecklists,
+  getMeasurements,
+  getStockItems,
   getTombstones,
   clearTombstones,
   getPrefsSnapshot,
@@ -173,10 +177,14 @@ export async function pushAll({
   // sync -- same reason exportBackupData/exportBoardData leave it out too.
   const boards = getBoards().filter((b) => !b.isSystem);
   const checklists = getChecklists();
+  const measurements = getMeasurements();
+  const stockItems = getStockItems();
   const records = [
     ...(await Promise.all(cards.map((c) => toRecord("cards", c)))),
     ...(await Promise.all(boards.map((b) => toRecord("boards", b)))),
     ...(await Promise.all(checklists.map((l) => toRecord("checklists", l)))),
+    ...(await Promise.all(measurements.map((m) => toRecord("measurements", m)))),
+    ...(await Promise.all(stockItems.map((i) => toRecord("stockItems", i)))),
     ...tombstones.map(toTombstoneRecord),
   ];
   // Only pushed once prefs have actually been touched locally (getPrefsUpdatedAt
@@ -213,7 +221,7 @@ export async function pullChanges({ upsertRecords, applyRemoteDeletion, applyPre
   const result = await callBackupApi("pull", since ? { since } : {});
   if (!result?.records) return { pulled: 0 };
 
-  const byStore = { cards: [], boards: [], checklists: [] };
+  const byStore = { cards: [], boards: [], checklists: [], measurements: [], stockItems: [] };
   const deletions = [];
   for (const r of result.records) {
     if (r.store === PREFS_STORE) {

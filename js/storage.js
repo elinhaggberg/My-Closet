@@ -179,6 +179,8 @@ export async function applyRemoteDeletion(store, recordId) {
   if (store === "cards") return deleteCard(recordId, { tombstone: false });
   if (store === "boards") return deleteBoard(recordId, { tombstone: false });
   if (store === "checklists") return deleteChecklist(recordId, { tombstone: false });
+  if (store === "measurements") return deleteMeasurement(recordId, { tombstone: false });
+  if (store === "stockItems") return deleteStockItem(recordId, { tombstone: false });
 }
 
 // A pulled record's image arrives as either a portable data: URI (from an
@@ -217,6 +219,8 @@ export async function upsertRecords(store, records) {
   if (!records.length) return;
   if (store === "boards") return upsertById(BOARDS_KEY, records);
   if (store === "checklists") return upsertById(CHECKLISTS_KEY, records);
+  if (store === "measurements") return upsertById(MEASUREMENTS_KEY, records);
+  if (store === "stockItems") return upsertById(STOCK_ITEMS_KEY, records);
   if (store !== "cards") return;
   const revived = await Promise.all(records.map(async (r) => ({ ...r, image: await reviveImage(r.image, r.id) })));
   const cards = getCards();
@@ -281,15 +285,20 @@ export function getLatestMeasurement() {
 
 export function saveMeasurement(entry) {
   const all = readJSON(MEASUREMENTS_KEY, []);
+  const withTimestamp = { ...entry, updatedAt: Date.now() };
   const idx = all.findIndex((m) => m.id === entry.id);
-  if (idx >= 0) all[idx] = entry;
-  else all.push(entry);
+  if (idx >= 0) all[idx] = withTimestamp;
+  else all.push(withTimestamp);
   writeJSON(MEASUREMENTS_KEY, all);
-  return entry;
+  return withTimestamp;
 }
 
-export function deleteMeasurement(id) {
+// { tombstone: false } is for js/cloudBackup.js's applyRemoteDeletion only,
+// replaying a deletion that already happened on another device -- same
+// reasoning as deleteCard's option above.
+export function deleteMeasurement(id, { tombstone = true } = {}) {
   writeJSON(MEASUREMENTS_KEY, readJSON(MEASUREMENTS_KEY, []).filter((m) => m.id !== id));
+  if (tombstone) recordTombstone("measurements", id);
 }
 
 export function createEmptyMeasurement() {
@@ -305,6 +314,7 @@ export function getSizePrefs() {
 
 export function setSizePrefs(prefs) {
   writeJSON(SIZE_PREFS_KEY, prefs);
+  bumpPrefsUpdatedAt();
 }
 
 export function getMeasurementNotes() {
@@ -313,6 +323,7 @@ export function getMeasurementNotes() {
 
 export function setMeasurementNotes(text) {
   localStorage.setItem(MEASUREMENT_NOTES_KEY, text);
+  bumpPrefsUpdatedAt();
 }
 
 // ---- Lists (checklists) ----
@@ -390,8 +401,12 @@ export function saveStockItem(item) {
   return withTimestamp;
 }
 
-export function deleteStockItem(id) {
+// { tombstone: false } is for js/cloudBackup.js's applyRemoteDeletion only,
+// replaying a deletion that already happened on another device -- same
+// reasoning as deleteCard's option above.
+export function deleteStockItem(id, { tombstone = true } = {}) {
   writeJSON(STOCK_ITEMS_KEY, getStockItems().filter((i) => i.id !== id));
+  if (tombstone) recordTombstone("stockItems", id);
 }
 
 export function createEmptyStockItem() {
@@ -666,13 +681,22 @@ export function setHomeTitle(value) {
 
 // ---- Cloud Backup prefs sync ----
 //
-// Theme, unit, and home title are also part of a local backup file (see
-// exportBackupData/importData above) -- bundled the same way into a single
-// Cloud Backup record (store: "prefs") so a device that pulls from Cloud
-// Backup gets its look and title back too, not just its cards. See
-// js/cloudBackup.js's pushAll/pullChanges for where this record travels.
+// Theme, unit, home title, size prefs, and measurement notes are also part
+// of a local backup file (see exportBackupData/importData above) -- bundled
+// the same way into a single Cloud Backup record (store: "prefs") so a
+// device that pulls from Cloud Backup gets these back too, not just its
+// cards. Single-blob values rather than id-keyed lists, so like theme/unit/
+// homeTitle they travel as one last-write-wins record rather than their own
+// syncable store. See js/cloudBackup.js's pushAll/pullChanges for where
+// this record travels.
 export function getPrefsSnapshot() {
-  return { theme: getThemePref(), unit: getUnit(), homeTitle: getHomeTitle() };
+  return {
+    theme: getThemePref(),
+    unit: getUnit(),
+    homeTitle: getHomeTitle(),
+    sizePrefs: getSizePrefs(),
+    measurementNotes: getMeasurementNotes(),
+  };
 }
 
 export function getPrefsUpdatedAt() {
@@ -691,6 +715,8 @@ export function applyPrefsSnapshot(prefs, updatedAt) {
     const trimmed = String(prefs.homeTitle).trim();
     if (trimmed) localStorage.setItem(HOME_TITLE_KEY, trimmed);
   }
+  if (prefs.sizePrefs && typeof prefs.sizePrefs === "object") writeJSON(SIZE_PREFS_KEY, prefs.sizePrefs);
+  if (typeof prefs.measurementNotes === "string") localStorage.setItem(MEASUREMENT_NOTES_KEY, prefs.measurementNotes);
   if (updatedAt) localStorage.setItem(PREFS_UPDATED_AT_KEY, updatedAt);
 }
 
