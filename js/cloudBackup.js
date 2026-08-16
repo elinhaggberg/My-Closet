@@ -13,12 +13,14 @@ import { syncRecordImageForPush, deleteRecordImage } from "./cloudImageSync.js";
 const PASSPHRASE_KEY = "mc_backup_passphrase_v1";
 const LAST_SYNCED_KEY = "mc_backup_last_synced_v1";
 const PERIODIC_INTERVAL_MS = 15 * 60 * 1000;
-// Boards are just tag-like references stored on each card (card.boardIds),
-// not their own synced entities -- there's only ever one syncable store.
-// Kept as a param throughout (rather than hardcoding "cards" everywhere)
-// for consistency with the storage: ref format and in case a second store
-// is ever added later.
-const SYNCABLE_STORES = ["cards"];
+// Each card carries its board memberships as tag-like references
+// (card.boardIds), but a board (name, color...) and a checklist (name,
+// items) are their own entities with their own local stores -- see
+// storage.js's BOARDS_KEY/CHECKLISTS_KEY -- so they need to travel through
+// push/pull too, or a restore on a fresh device leaves cards pointing at
+// board ids nothing locally knows the name of, and checklists missing
+// entirely.
+const SYNCABLE_STORES = ["cards", "boards", "checklists"];
 // A single non-content record (theme/unit/homeTitle, see storage.js's
 // getPrefsSnapshot) travels through the same push/pull API as everything
 // else, under its own reserved store name and a fixed record id since
@@ -155,11 +157,26 @@ function toTombstoneRecord(t) {
 // counterpart makes -- backup-sync's own last-write-wins-by-timestamp check
 // on the server makes resending everything safe, just a bit more bandwidth
 // than strictly necessary, acceptable at personal-register scale.
-export async function pushAll({ getCards, getTombstones, clearTombstones, getPrefsSnapshot, getPrefsUpdatedAt }) {
+export async function pushAll({
+  getCards,
+  getBoards,
+  getChecklists,
+  getTombstones,
+  clearTombstones,
+  getPrefsSnapshot,
+  getPrefsUpdatedAt,
+}) {
   if (!isBackupConfigured()) return { applied: 0 };
   const [cards, tombstones] = await Promise.all([getCards(), getTombstones()]);
+  // The system Wishlist board always exists locally on every device (see
+  // storage.js's ensureWishlistBoard) so it never needs to travel through
+  // sync -- same reason exportBackupData/exportBoardData leave it out too.
+  const boards = getBoards().filter((b) => !b.isSystem);
+  const checklists = getChecklists();
   const records = [
     ...(await Promise.all(cards.map((c) => toRecord("cards", c)))),
+    ...(await Promise.all(boards.map((b) => toRecord("boards", b)))),
+    ...(await Promise.all(checklists.map((l) => toRecord("checklists", l)))),
     ...tombstones.map(toTombstoneRecord),
   ];
   // Only pushed once prefs have actually been touched locally (getPrefsUpdatedAt
@@ -196,7 +213,7 @@ export async function pullChanges({ upsertRecords, applyRemoteDeletion, applyPre
   const result = await callBackupApi("pull", since ? { since } : {});
   if (!result?.records) return { pulled: 0 };
 
-  const byStore = { cards: [] };
+  const byStore = { cards: [], boards: [], checklists: [] };
   const deletions = [];
   for (const r of result.records) {
     if (r.store === PREFS_STORE) {
