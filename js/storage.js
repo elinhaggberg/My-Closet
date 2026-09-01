@@ -818,6 +818,49 @@ export async function migrateImagesToIndexedDB() {
   localStorage.setItem(IMAGES_MIGRATED_KEY, "true");
 }
 
+// ---- Cloud Backup rejoin ----
+
+// How many syncable content records exist on this device -- shown in the
+// "Add this app" join flow (see settingsMenu.js) so someone reconnecting a
+// device to a Cloud Backup project that's already backed up elsewhere can
+// see, before they sync, whether this device has its own local items that
+// would otherwise get pushed up as brand-new duplicates of what's already
+// there. isSystem boards are never counted -- see ensureWishlistBoard.
+export function getSyncableLocalContentCount() {
+  return (
+    getCards().length +
+    getBoards().filter((b) => !b.isSystem).length +
+    getChecklists().length +
+    getMeasurements().length +
+    getStockItems().length
+  );
+}
+
+// Wipes every syncable content store (cards, boards, checklists,
+// measurements, stock items) on this device only -- no tombstones recorded,
+// since the point isn't to delete anything from the cloud, just to stop
+// this device's own already-covered local copies from being pushed back up
+// as new duplicate records the next time it syncs (Cloud Backup matches by
+// record id, not content, so two independently-created copies of the same
+// physical item never merge into one on their own). Used only from the
+// "Add this app" join flow when reconnecting to a project that already has
+// this data -- a Cloud Backup pull right after this repopulates everything
+// from there. Preferences (theme/unit/etc.) are left alone; those come back
+// from the same pull via the "prefs" record either way.
+export async function clearLocalContentForRejoin() {
+  for (const card of getCards()) {
+    if (card.image?.startsWith(IDB_PREFIX)) {
+      await deleteImage(card.image.slice(IDB_PREFIX.length)).catch(() => {});
+    }
+  }
+  writeJSON(CARDS_KEY, []);
+  writeJSON(BOARDS_KEY, []);
+  writeJSON(CHECKLISTS_KEY, []);
+  writeJSON(MEASUREMENTS_KEY, []);
+  writeJSON(STOCK_ITEMS_KEY, []);
+  writeJSON(TOMBSTONES_KEY, []);
+}
+
 export function getOnboardingSeen() {
   return localStorage.getItem(ONBOARDING_SEEN_KEY) === "true";
 }
