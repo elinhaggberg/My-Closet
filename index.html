@@ -677,22 +677,30 @@
           <button type="button" class="text-btn secondary" id="cloud-sync-manage-btn">Manage connection</button>
         </div>
         <div id="cloud-sync-manage-section">
+          <p class="cloud-sync-intro">Pick your existing project below — the one already holding your data. Never create a new project to reconnect a device; a new project starts empty and can't see data backed up under a different one.</p>
           <div class="project-picker-list" id="cloud-sync-project-picker"></div>
           <div class="hidden" id="cloud-sync-join-section">
-            <p class="card-detail-section-label" style="margin-top:8px;">Cloud Backup</p>
-            <p class="cloud-sync-intro">This project already has Cloud Backup set up — probably from another Make It Local app, or this same app on another device. Enter its passphrase to add this app to it, no new setup needed.</p>
+            <p class="card-detail-section-label" style="margin-top:8px;">This project is already syncing — reconnect to it</p>
+            <p class="cloud-sync-intro">This is the right choice for you: this project already has Cloud Backup set up, from another Make It Local app or this same app on another install. Enter its passphrase below (not your Supabase password) to reconnect this install to it — nothing gets set up from scratch, and your existing data isn't touched or duplicated in the cloud.</p>
             <label class="field">
               <span>Backup passphrase</span>
               <input type="text" id="cloud-sync-join-passphrase" autocomplete="off" autocapitalize="off" spellcheck="false" />
             </label>
             <p class="import-message hidden" id="cloud-sync-join-message"></p>
+            <div class="hidden" id="cloud-sync-join-local-warning">
+              <p class="import-message error" id="cloud-sync-join-local-text"></p>
+              <button type="button" class="wishlist-toggle-btn active" id="cloud-sync-join-discard-toggle">
+                <svg class="icon wishlist-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v4"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>
+                <span class="wishlist-toggle-label">Clear them from this install first (recommended)</span>
+              </button>
+            </div>
             <div class="form-actions">
               <button type="button" class="text-btn primary" id="cloud-sync-join-btn">Add this app</button>
             </div>
           </div>
           <div class="hidden" id="cloud-sync-install-section">
-            <p class="card-detail-section-label" style="margin-top:8px;">Cloud Backup</p>
-            <p class="cloud-sync-intro">Backs up and syncs all your saved items, including photos, to your own Supabase project.</p>
+            <p class="card-detail-section-label" style="margin-top:8px;">This project has no Cloud Backup yet — set it up</p>
+            <p class="cloud-sync-intro">Backs up and syncs all your saved items, including photos, to your own Supabase project. Only do this the first time — if you've used Cloud Backup before, make sure you picked that same project above first; this button only appears when the selected project has nothing set up yet, so it can't overwrite an earlier install by mistake.</p>
             <div class="cloud-sync-steps" id="cloud-sync-install-steps"></div>
             <div class="form-actions">
               <button type="button" class="text-btn primary" id="cloud-sync-install-btn">Install Cloud Backup</button>

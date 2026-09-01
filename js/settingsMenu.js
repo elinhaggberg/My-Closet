@@ -19,6 +19,8 @@ import {
   getPrefsSnapshot,
   getPrefsUpdatedAt,
   applyPrefsSnapshot,
+  getSyncableLocalContentCount,
+  clearLocalContentForRejoin,
 } from "./storage.js";
 import { shareOrDownload } from "./share.js";
 import { getTheme, setTheme, applyTheme } from "./theme.js";
@@ -194,6 +196,9 @@ export function openCloudSyncSheet(oauthResult) {
   const joinPassphraseInput = el.querySelector("#cloud-sync-join-passphrase");
   const joinMessageEl = el.querySelector("#cloud-sync-join-message");
   const joinBtn = el.querySelector("#cloud-sync-join-btn");
+  const joinLocalWarningEl = el.querySelector("#cloud-sync-join-local-warning");
+  const joinLocalTextEl = el.querySelector("#cloud-sync-join-local-text");
+  const joinDiscardToggle = el.querySelector("#cloud-sync-join-discard-toggle");
   const backupSectionEl = el.querySelector("#cloud-sync-backup-section");
   const lastSyncedEl = el.querySelector("#cloud-sync-last-synced");
   const syncNowBtn = el.querySelector("#cloud-sync-sync-now-btn");
@@ -276,6 +281,10 @@ export function openCloudSyncSheet(oauthResult) {
     }
   }
 
+  joinDiscardToggle.addEventListener("click", () => {
+    joinDiscardToggle.classList.toggle("active");
+  });
+
   // The "another app/device already set this project up" path -- verifies
   // the entered passphrase live (see joinExistingBackup's own comment) so a
   // typo shows up immediately as "that's not right," rather than silently
@@ -283,6 +292,12 @@ export function openCloudSyncSheet(oauthResult) {
   async function runJoin() {
     const passphrase = joinPassphraseInput.value.trim();
     if (!passphrase) return;
+    // Read before the join call, not after -- joinExistingBackup succeeding
+    // doesn't change what's on this device, but capturing the choice
+    // upfront keeps "what will happen" obvious at the moment of clicking
+    // Add this app, rather than depending on nothing else touching the
+    // toggle in between.
+    const discardLocal = !joinLocalWarningEl.classList.contains("hidden") && joinDiscardToggle.classList.contains("active");
     setButtonBusy(joinBtn, "Connecting…");
     joinMessageEl.classList.add("hidden");
     try {
@@ -299,6 +314,12 @@ export function openCloudSyncSheet(oauthResult) {
         joinMessageEl.classList.add("error");
         return;
       }
+      // Clears this install's own local items *before* the sync below, so
+      // the upcoming push has nothing left to send -- otherwise they'd go
+      // up as brand-new records (Cloud Backup matches by id, not content)
+      // alongside the matching ones already in this project, i.e. exactly
+      // the duplicate-items problem this toggle exists to prevent.
+      if (discardLocal) await clearLocalContentForRejoin();
       await render();
       await runSyncNow();
     } catch (err) {
@@ -483,6 +504,22 @@ export function openCloudSyncSheet(oauthResult) {
     if (showJoin) {
       joinMessageEl.classList.add("hidden");
       joinPassphraseInput.value = "";
+      // Local items on *this* install that haven't gone through a sync yet
+      // are the actual source of the "duplicate pins" problem -- Cloud
+      // Backup matches by record id, not content, so pushing them up
+      // alongside a project that already has their (independently created)
+      // counterparts just adds a second copy of each, it never merges them.
+      // Surfacing the count and defaulting the "clear them first" toggle to
+      // on (whenever there's anything to clear) makes the safe path the one
+      // that requires no extra thought.
+      const localCount = getSyncableLocalContentCount();
+      joinLocalWarningEl.classList.toggle("hidden", localCount === 0);
+      if (localCount > 0) {
+        joinLocalTextEl.textContent = `This install has ${localCount} item${localCount !== 1 ? "s" : ""} saved locally that ${
+          localCount !== 1 ? "haven't" : "hasn't"
+        } been backed up here yet. Left in place, they'll be added to this project as new items alongside whatever's already there — even if they're the same items, re-entered by hand.`;
+        joinDiscardToggle.classList.add("active");
+      }
     }
     backupSectionEl.classList.toggle("hidden", !installed.backup || !isBackupConfigured());
     if (installed.backup) {
