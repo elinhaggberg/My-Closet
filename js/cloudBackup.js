@@ -240,6 +240,26 @@ export async function pullChanges({ upsertRecords, applyRemoteDeletion, applyPre
   return { pulled: result.records.length };
 }
 
+// Read-only "does this project actually have any of *this app's* data yet"
+// check -- same "pull everything" request pullChanges makes on a fresh
+// device (no `since`), but only inspects the response instead of applying
+// it locally. Checked against SYNCABLE_STORES specifically, not "any data
+// at all" -- a shared project can easily already hold another Make It
+// Local app's records (that's the whole point of sharing one project), and
+// those don't count as this app having anything to fall back on. Used by
+// the "Add this app" join flow's "clear my local items first" option (see
+// settingsMenu.js's runJoin) so that option only ever clears once it's
+// confirmed there's something of *this app's* in the cloud to fall back on
+// -- otherwise a device with local-only, never-yet-backed-up items would
+// clear itself down to nothing with no way back. Returns true/false, or
+// null if the project couldn't be reached at all (treated as "don't
+// clear" by the caller, same caution as a wrong/unreachable passphrase).
+export async function hasRemoteContent() {
+  const result = await callBackupApi("pull", {});
+  if (!result?.records) return null;
+  return result.records.some((r) => SYNCABLE_STORES.includes(r.store) && !r.deleted);
+}
+
 // The manual "Sync now" action, and what the periodic/visibility triggers
 // below call too -- push first (send whatever's changed here), then pull
 // (pick up whatever changed elsewhere), so a round-trip always leaves this

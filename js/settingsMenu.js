@@ -48,6 +48,7 @@ import {
   getLastSyncedDisplay,
   syncNow,
   applyPairingCode,
+  hasRemoteContent,
 } from "./cloudBackup.js";
 import { ICON_CHECK } from "./icons.js";
 
@@ -318,10 +319,28 @@ export function openCloudSyncSheet(oauthResult) {
       // the upcoming push has nothing left to send -- otherwise they'd go
       // up as brand-new records (Cloud Backup matches by id, not content)
       // alongside the matching ones already in this project, i.e. exactly
-      // the duplicate-items problem this toggle exists to prevent.
-      if (discardLocal) await clearLocalContentForRejoin();
+      // the duplicate-items problem this toggle exists to prevent. Only
+      // ever clears once hasRemoteContent confirms this project actually
+      // has *this app's* data waiting -- a project can easily already hold
+      // another Make It Local app's records (that's the point of sharing
+      // one project) without having anything of this app's yet, and
+      // clearing on that guess would empty this device with nothing to
+      // fall back on. False or unreachable (null) both skip the clear;
+      // only false gets the reassuring message below, since null means we
+      // genuinely don't know.
+      let joinedEmptyProject = false;
+      if (discardLocal) {
+        const remoteHasData = await hasRemoteContent();
+        if (remoteHasData) await clearLocalContentForRejoin();
+        else if (remoteHasData === false) joinedEmptyProject = true;
+      }
       await render();
       await runSyncNow();
+      if (joinedEmptyProject) {
+        backupMessageEl.textContent =
+          "Connected. This project didn't have any My Closet data yet, so nothing local was cleared — your items were just added as its first copy instead.";
+        backupMessageEl.classList.remove("hidden", "error");
+      }
     } catch (err) {
       joinMessageEl.textContent = err.message || "Something went wrong. Please try again.";
       joinMessageEl.classList.remove("hidden");
