@@ -4,7 +4,7 @@
 // spec). Used once during install by js/cloudSyncInstall.js. The value
 // passes straight through from the client to Supabase; it's never logged
 // or stored here.
-const REF_PATTERN = /^[a-z]+$/;
+const REF_PATTERN = /^[a-z0-9]+$/;
 const NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 
 module.exports = async (req, res) => {
