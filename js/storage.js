@@ -818,47 +818,159 @@ export async function migrateImagesToIndexedDB() {
   localStorage.setItem(IMAGES_MIGRATED_KEY, "true");
 }
 
-// ---- Cloud Backup rejoin ----
+// ---- Cloud Backup rejoin: content-based duplicate merge ----
+//
+// After joining a project that already has this app's data (see
+// settingsMenu.js's runJoin), a straight pull leaves this device with both
+// its own local-only items and the cloud's independently-created copies of
+// the same real-world things -- Cloud Backup only ever matches by record
+// id, so two installs that each entered "the same jacket" by hand never
+// had a chance to agree on one id for it. mergeLocalDuplicates runs once
+// right after that pull: content-matches likely duplicates within each
+// store and keeps only one of each (the more recently updated copy),
+// tombstoning the rest so the next push clears them from the cloud too,
+// not just here. Never run as part of ordinary sync, where two records
+// briefly looking alike is far more likely a coincidence than an actual
+// duplicate.
+//
+// Deliberately conservative throughout -- a missed duplicate is a small
+// manual cleanup, a wrongly-merged pair is real data loss -- so every
+// match is on a strong signal (a shared link, or several fields agreeing
+// at once), never a single loosely-normalized field alone.
 
-// How many syncable content records exist on this device -- shown in the
-// "Add this app" join flow (see settingsMenu.js) so someone reconnecting a
-// device to a Cloud Backup project that's already backed up elsewhere can
-// see, before they sync, whether this device has its own local items that
-// would otherwise get pushed up as brand-new duplicates of what's already
-// there. isSystem boards are never counted -- see ensureWishlistBoard.
-export function getSyncableLocalContentCount() {
-  return (
-    getCards().length +
-    getBoards().filter((b) => !b.isSystem).length +
-    getChecklists().length +
-    getMeasurements().length +
-    getStockItems().length
-  );
+function normalizedText(value) {
+  return (value || "").trim().toLowerCase();
 }
 
-// Wipes every syncable content store (cards, boards, checklists,
-// measurements, stock items) on this device only -- no tombstones recorded,
-// since the point isn't to delete anything from the cloud, just to stop
-// this device's own already-covered local copies from being pushed back up
-// as new duplicate records the next time it syncs (Cloud Backup matches by
-// record id, not content, so two independently-created copies of the same
-// physical item never merge into one on their own). Used only from the
-// "Add this app" join flow when reconnecting to a project that already has
-// this data -- a Cloud Backup pull right after this repopulates everything
-// from there. Preferences (theme/unit/etc.) are left alone; those come back
-// from the same pull via the "prefs" record either way.
-export async function clearLocalContentForRejoin() {
+function normalizedUrl(value) {
+  return normalizedText(value).replace(/\/+$/, "");
+}
+
+// A shared, non-empty url is treated as decisive on its own (two different
+// physical items essentially never share a saved link). Without a url on
+// both sides, requires title *and* note *and* price to all agree -- title
+// alone is too common a coincidence ("Blue sweater" said twice for two
+// different sweaters) to merge on by itself.
+function cardsLikelyMatch(a, b) {
+  const aUrl = normalizedUrl(a.url);
+  const bUrl = normalizedUrl(b.url);
+  if (aUrl && bUrl) return aUrl === bUrl;
+  const aTitle = normalizedText(a.title);
+  if (!aTitle || aTitle !== normalizedText(b.title)) return false;
+  return normalizedText(a.note) === normalizedText(b.note) && String(a.price || "") === String(b.price || "");
+}
+
+async function dedupeCards() {
+  const kept = [];
+  let removed = 0;
   for (const card of getCards()) {
-    if (card.image?.startsWith(IDB_PREFIX)) {
-      await deleteImage(card.image.slice(IDB_PREFIX.length)).catch(() => {});
+    const dupIdx = kept.findIndex((k) => cardsLikelyMatch(k, card));
+    if (dupIdx < 0) {
+      kept.push(card);
+      continue;
     }
+    const existing = kept[dupIdx];
+    const winner = (existing.updatedAt || 0) >= (card.updatedAt || 0) ? existing : card;
+    kept[dupIdx] = winner;
+    await deleteCard(winner === existing ? card.id : existing.id);
+    removed++;
   }
-  writeJSON(CARDS_KEY, []);
-  writeJSON(BOARDS_KEY, []);
-  writeJSON(CHECKLISTS_KEY, []);
-  writeJSON(MEASUREMENTS_KEY, []);
-  writeJSON(STOCK_ITEMS_KEY, []);
-  writeJSON(TOMBSTONES_KEY, []);
+  return removed;
+}
+
+async function dedupeBoards() {
+  const kept = [];
+  let removed = 0;
+  for (const board of getBoards().filter((b) => !b.isSystem)) {
+    const dupIdx = kept.findIndex((k) => normalizedText(k.name) === normalizedText(board.name));
+    if (dupIdx < 0) {
+      kept.push(board);
+      continue;
+    }
+    const existing = kept[dupIdx];
+    const winner = (existing.updatedAt || 0) >= (board.updatedAt || 0) ? existing : board;
+    const loser = winner === existing ? board : existing;
+    kept[dupIdx] = winner;
+    // Cards pointing at the board being removed move to the surviving one
+    // instead of just losing that membership, the way a plain deleteBoard
+    // call alone would leave them.
+    for (const card of getCards()) {
+      if (!card.boardIds.includes(loser.id)) continue;
+      const boardIds = card.boardIds.filter((id) => id !== loser.id);
+      if (!boardIds.includes(winner.id)) boardIds.push(winner.id);
+      await saveCard({ ...card, boardIds });
+    }
+    await deleteBoard(loser.id);
+    removed++;
+  }
+  return removed;
+}
+
+async function dedupeChecklists() {
+  const kept = [];
+  let removed = 0;
+  for (const list of getChecklists()) {
+    const dupIdx = kept.findIndex((k) => normalizedText(k.name) === normalizedText(list.name));
+    if (dupIdx < 0) {
+      kept.push(list);
+      continue;
+    }
+    const existing = kept[dupIdx];
+    const winner = (existing.updatedAt || 0) >= (list.updatedAt || 0) ? existing : list;
+    kept[dupIdx] = winner;
+    deleteChecklist(winner === existing ? list.id : existing.id);
+    removed++;
+  }
+  return removed;
+}
+
+function dedupeMeasurements() {
+  const kept = [];
+  let removed = 0;
+  for (const entry of getMeasurements()) {
+    const dupIdx = kept.findIndex((k) => k.date === entry.date);
+    if (dupIdx < 0) {
+      kept.push(entry);
+      continue;
+    }
+    const existing = kept[dupIdx];
+    const winner = (existing.updatedAt || 0) >= (entry.updatedAt || 0) ? existing : entry;
+    kept[dupIdx] = winner;
+    deleteMeasurement(winner === existing ? entry.id : existing.id);
+    removed++;
+  }
+  return removed;
+}
+
+function dedupeStockItems() {
+  const kept = [];
+  let removed = 0;
+  for (const item of getStockItems()) {
+    const dupIdx = kept.findIndex((k) => normalizedText(k.name) === normalizedText(item.name) && normalizedText(k.type) === normalizedText(item.type));
+    if (dupIdx < 0) {
+      kept.push(item);
+      continue;
+    }
+    const existing = kept[dupIdx];
+    const winner = (existing.updatedAt || 0) >= (item.updatedAt || 0) ? existing : item;
+    kept[dupIdx] = winner;
+    deleteStockItem(winner === existing ? item.id : existing.id);
+    removed++;
+  }
+  return removed;
+}
+
+// Returns how many duplicates were removed per store, so the caller can
+// summarize what just happened ("merged, removed 3 duplicates" vs. "merged,
+// nothing to clean up").
+export async function mergeLocalDuplicates() {
+  return {
+    cards: await dedupeCards(),
+    boards: await dedupeBoards(),
+    checklists: await dedupeChecklists(),
+    measurements: dedupeMeasurements(),
+    stockItems: dedupeStockItems(),
+  };
 }
 
 export function getOnboardingSeen() {

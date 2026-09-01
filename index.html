@@ -681,19 +681,12 @@
           <div class="project-picker-list" id="cloud-sync-project-picker"></div>
           <div class="hidden" id="cloud-sync-join-section">
             <p class="card-detail-section-label" style="margin-top:8px;">This project is already syncing — reconnect to it</p>
-            <p class="cloud-sync-intro">This is the right choice for you: this project already has Cloud Backup set up, from another Make It Local app or this same app on another install. Enter its passphrase below (not your Supabase password) to reconnect this install to it — nothing gets set up from scratch, and your existing data isn't touched or duplicated in the cloud.</p>
+            <p class="cloud-sync-intro">This is the right choice for you: this project already has Cloud Backup set up, from another Make It Local app or this same app on another install. Enter its passphrase below (not your Supabase password) to reconnect — nothing gets set up from scratch. This install's local items and the project's are automatically merged: anything only on one side is kept, and any items that look like the same thing saved twice are combined into one, both here and in the cloud.</p>
             <label class="field">
               <span>Backup passphrase</span>
               <input type="text" id="cloud-sync-join-passphrase" autocomplete="off" autocapitalize="off" spellcheck="false" />
             </label>
             <p class="import-message hidden" id="cloud-sync-join-message"></p>
-            <div class="hidden" id="cloud-sync-join-local-warning">
-              <p class="import-message error" id="cloud-sync-join-local-text"></p>
-              <button type="button" class="wishlist-toggle-btn active" id="cloud-sync-join-discard-toggle">
-                <svg class="icon wishlist-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l10 18H2z"/><path d="M12 10v4"/><circle cx="12" cy="17.3" r="0.9" fill="currentColor" stroke="none"/></svg>
-                <span class="wishlist-toggle-label">Clear them from this install first (recommended)</span>
-              </button>
-            </div>
             <div class="form-actions">
               <button type="button" class="text-btn primary" id="cloud-sync-join-btn">Add this app</button>
             </div>

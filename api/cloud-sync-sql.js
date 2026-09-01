@@ -6,7 +6,7 @@
 // user ever opening the SQL editor themselves. The user's own OAuth access
 // token passes through untouched; this never sees or needs the OAuth app's
 // client secret.
-const REF_PATTERN = /^[a-z]+$/;
+const REF_PATTERN = /^[a-z0-9]+$/;
 
 module.exports = async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");

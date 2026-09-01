@@ -9,7 +9,7 @@
 // the actual multipart body server-side using Node's built-in FormData/Blob
 // rather than asking the browser to construct multipart itself or trying to
 // pipe a raw stream through -- much simpler to get right than either.
-const REF_PATTERN = /^[a-z]+$/;
+const REF_PATTERN = /^[a-z0-9]+$/;
 const SLUG_PATTERN = /^[A-Za-z][A-Za-z0-9_-]*$/;
 
 module.exports = async (req, res) => {
