@@ -19,8 +19,7 @@ import {
   getPrefsSnapshot,
   getPrefsUpdatedAt,
   applyPrefsSnapshot,
-  getSyncableLocalContentCount,
-  clearLocalContentForRejoin,
+  mergeLocalDuplicates,
 } from "./storage.js";
 import { shareOrDownload } from "./share.js";
 import { getTheme, setTheme, applyTheme } from "./theme.js";
@@ -47,8 +46,9 @@ import {
   getBackupPassphrase,
   getLastSyncedDisplay,
   syncNow,
+  pullChanges,
+  pushAll,
   applyPairingCode,
-  hasRemoteContent,
 } from "./cloudBackup.js";
 import { ICON_CHECK } from "./icons.js";
 
@@ -197,9 +197,6 @@ export function openCloudSyncSheet(oauthResult) {
   const joinPassphraseInput = el.querySelector("#cloud-sync-join-passphrase");
   const joinMessageEl = el.querySelector("#cloud-sync-join-message");
   const joinBtn = el.querySelector("#cloud-sync-join-btn");
-  const joinLocalWarningEl = el.querySelector("#cloud-sync-join-local-warning");
-  const joinLocalTextEl = el.querySelector("#cloud-sync-join-local-text");
-  const joinDiscardToggle = el.querySelector("#cloud-sync-join-discard-toggle");
   const backupSectionEl = el.querySelector("#cloud-sync-backup-section");
   const lastSyncedEl = el.querySelector("#cloud-sync-last-synced");
   const syncNowBtn = el.querySelector("#cloud-sync-sync-now-btn");
@@ -282,9 +279,22 @@ export function openCloudSyncSheet(oauthResult) {
     }
   }
 
-  joinDiscardToggle.addEventListener("click", () => {
-    joinDiscardToggle.classList.toggle("active");
-  });
+  function renderLastSynced() {
+    const last = getLastSyncedDisplay();
+    lastSyncedEl.textContent = last ? `Last synced ${last.toLocaleString()}.` : "Not synced yet.";
+  }
+
+  // Shared by runSyncNow and runJoin below -- everything a successful round
+  // needs to reflect on screen besides the message itself, which each
+  // caller phrases differently.
+  function showSyncSuccess(message) {
+    applyTheme();
+    const homeTitleEl = document.getElementById("home-title");
+    if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
+    renderLastSynced();
+    backupMessageEl.textContent = message;
+    backupMessageEl.classList.remove("hidden", "error");
+  }
 
   // The "another app/device already set this project up" path -- verifies
   // the entered passphrase live (see joinExistingBackup's own comment) so a
@@ -293,12 +303,6 @@ export function openCloudSyncSheet(oauthResult) {
   async function runJoin() {
     const passphrase = joinPassphraseInput.value.trim();
     if (!passphrase) return;
-    // Read before the join call, not after -- joinExistingBackup succeeding
-    // doesn't change what's on this device, but capturing the choice
-    // upfront keeps "what will happen" obvious at the moment of clicking
-    // Add this app, rather than depending on nothing else touching the
-    // toggle in between.
-    const discardLocal = !joinLocalWarningEl.classList.contains("hidden") && joinDiscardToggle.classList.contains("active");
     setButtonBusy(joinBtn, "Connecting…");
     joinMessageEl.classList.add("hidden");
     try {
@@ -315,32 +319,26 @@ export function openCloudSyncSheet(oauthResult) {
         joinMessageEl.classList.add("error");
         return;
       }
-      // Clears this install's own local items *before* the sync below, so
-      // the upcoming push has nothing left to send -- otherwise they'd go
-      // up as brand-new records (Cloud Backup matches by id, not content)
-      // alongside the matching ones already in this project, i.e. exactly
-      // the duplicate-items problem this toggle exists to prevent. Only
-      // ever clears once hasRemoteContent confirms this project actually
-      // has *this app's* data waiting -- a project can easily already hold
-      // another Make It Local app's records (that's the point of sharing
-      // one project) without having anything of this app's yet, and
-      // clearing on that guess would empty this device with nothing to
-      // fall back on. False or unreachable (null) both skip the clear;
-      // only false gets the reassuring message below, since null means we
-      // genuinely don't know.
-      let joinedEmptyProject = false;
-      if (discardLocal) {
-        const remoteHasData = await hasRemoteContent();
-        if (remoteHasData) await clearLocalContentForRejoin();
-        else if (remoteHasData === false) joinedEmptyProject = true;
-      }
+      // Pull whatever this project already has -- upsert-only, never
+      // deletes anything here (see pullChanges) -- then reconcile likely
+      // duplicates between that and what was already local (see
+      // storage.js's mergeLocalDuplicates for the matching rules), then
+      // push whatever's left. Deliberately not the ordinary push-then-pull
+      // syncNow() sequence: pulling first is what lets the merge step see
+      // (and dedupe against) the cloud's copies before anything of this
+      // device's gets sent up, so nothing here is ever deleted on a guess
+      // about what the cloud does or doesn't have.
+      setButtonBusy(joinBtn, "Merging…");
+      await pullChanges(STORAGE_FNS);
+      const merged = await mergeLocalDuplicates();
+      await pushAll(STORAGE_FNS);
       await render();
-      await runSyncNow();
-      if (joinedEmptyProject) {
-        backupMessageEl.textContent =
-          "Connected. This project didn't have any My Closet data yet, so nothing local was cleared — your items were just added as its first copy instead.";
-        backupMessageEl.classList.remove("hidden", "error");
-      }
+      const removed = Object.values(merged).reduce((a, b) => a + b, 0);
+      showSyncSuccess(
+        removed > 0
+          ? `Connected and merged your data — removed ${removed} duplicate item${removed === 1 ? "" : "s"}.`
+          : "Connected and merged your data — no duplicates found."
+      );
     } catch (err) {
       joinMessageEl.textContent = err.message || "Something went wrong. Please try again.";
       joinMessageEl.classList.remove("hidden");
@@ -350,22 +348,12 @@ export function openCloudSyncSheet(oauthResult) {
     }
   }
 
-  function renderLastSynced() {
-    const last = getLastSyncedDisplay();
-    lastSyncedEl.textContent = last ? `Last synced ${last.toLocaleString()}.` : "Not synced yet.";
-  }
-
   async function runSyncNow() {
     setButtonBusy(syncNowBtn, "Syncing…");
     backupMessageEl.classList.add("hidden");
     try {
       await syncNow(STORAGE_FNS);
-      applyTheme();
-      const homeTitleEl = document.getElementById("home-title");
-      if (homeTitleEl) homeTitleEl.textContent = getHomeTitle();
-      renderLastSynced();
-      backupMessageEl.textContent = "Synced!";
-      backupMessageEl.classList.remove("hidden", "error");
+      showSyncSuccess("Synced!");
     } catch {
       backupMessageEl.textContent = "Couldn't sync right now. Please try again.";
       backupMessageEl.classList.remove("hidden");
@@ -523,22 +511,6 @@ export function openCloudSyncSheet(oauthResult) {
     if (showJoin) {
       joinMessageEl.classList.add("hidden");
       joinPassphraseInput.value = "";
-      // Local items on *this* install that haven't gone through a sync yet
-      // are the actual source of the "duplicate pins" problem -- Cloud
-      // Backup matches by record id, not content, so pushing them up
-      // alongside a project that already has their (independently created)
-      // counterparts just adds a second copy of each, it never merges them.
-      // Surfacing the count and defaulting the "clear them first" toggle to
-      // on (whenever there's anything to clear) makes the safe path the one
-      // that requires no extra thought.
-      const localCount = getSyncableLocalContentCount();
-      joinLocalWarningEl.classList.toggle("hidden", localCount === 0);
-      if (localCount > 0) {
-        joinLocalTextEl.textContent = `This install has ${localCount} item${localCount !== 1 ? "s" : ""} saved locally that ${
-          localCount !== 1 ? "haven't" : "hasn't"
-        } been backed up here yet. Left in place, they'll be added to this project as new items alongside whatever's already there — even if they're the same items, re-entered by hand.`;
-        joinDiscardToggle.classList.add("active");
-      }
     }
     backupSectionEl.classList.toggle("hidden", !installed.backup || !isBackupConfigured());
     if (installed.backup) {
